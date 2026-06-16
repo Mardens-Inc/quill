@@ -1,0 +1,8 @@
+[package]
+name = "quill_configuration_app"
+version = "0.1.0"
+edition = "2024"
+authors = ["Drew Chase"]
+description = "An Iced-rs desktop app for setting up the app and configuring settings."
+
+[dependencies]
