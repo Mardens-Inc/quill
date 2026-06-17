@@ -34,3 +34,9 @@ fn str_pcstr(value: impl Into<String>) -> Result<PCSTR, QuillError> {
         .map_err(|e| QuillError::StringConversionError("String".into(), "CString".into(), e))?;
     Ok(PCSTR(c_string.as_ptr().cast()))
 }
+fn str_pstr(value: impl Into<String>) -> Result<PSTR, QuillError> {
+    let string = value.into();
+    let c_string = CString::new(string)
+        .map_err(|e| QuillError::StringConversionError("String".into(), "CString".into(), e))?;
+    Ok(PSTR(c_string.as_ptr().cast::<u8>() as *mut u8))
+}
