@@ -1,6 +1,7 @@
 use crate::errors::QuillError;
 use crate::print_orientation::PageOrientation;
 use crate::printer_info::PrinterInfo;
+use crate::stock::Stock;
 use crate::{image_processing, to_cstring};
 use windows::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER;
 use windows::Win32::Graphics::Printing::{
@@ -99,18 +100,40 @@ impl PrinterHandle {
         &self,
         job_name: impl AsRef<str>,
         png: &image::RgbImage,
-        orentation: PageOrientation,
+        stock: Stock,
+        orientation: PageOrientation,
         scale: f32,
     ) -> Result<(), QuillError> {
         const BRIGHTNESS_THREASHOLD: u32 = 191; // ~25% brightness -> 255-(255*0.25) = 191.25
-        const DOTS_PER_MM: u32 = 8;
+        const DOTS_PER_MM: f32 = 8.0;
 
-        let source = image_processing::prepare_image(png, orentation, scale);
-        let width = source.width();
-        let height = source.height();
-        if width == 0 || height == 0 {
+        let to_dots = |mm: f32| (mm * DOTS_PER_MM).round() as u32;
+
+        let label_w_dots = to_dots(stock.width_mm()).max(1);
+        let label_h_dots = to_dots(stock.height_mm()).max(1);
+        let left_dots = to_dots(stock.exposed_liner_left_mm());
+        let right_dots = to_dots(stock.exposed_liner_right_mm());
+        let avail_w = label_w_dots.saturating_sub(left_dots + right_dots).max(1);
+        let avail_h = label_h_dots;
+
+        let rotated = image_processing::prepare_image(png, orientation, 1.0);
+        if rotated.width() == 0 || rotated.height() == 0 {
             return Ok(());
         }
+        let zoom = if scale > 0.0 { scale } else { 1.0 };
+        let fit = (avail_w as f32 / rotated.width() as f32)
+            .min(avail_h as f32 / rotated.height() as f32)
+            * zoom;
+        let target_w = ((rotated.width() as f32 * fit).round() as u32).max(1);
+        let target_h = ((rotated.height() as f32 * fit).round() as u32).max(1);
+        let source = image::imageops::resize(
+            &rotated,
+            target_w,
+            target_h,
+            image::imageops::FilterType::Lanczos3,
+        );
+        let width = source.width();
+        let height = source.height();
 
         let width_bytes = width.div_ceil(8);
         let mut raster = Vec::with_capacity((width_bytes * height) as usize);
@@ -132,14 +155,19 @@ impl PrinterHandle {
             }
         }
 
-        let width_mm = width.div_ceil(DOTS_PER_MM);
-        let height_mm = height.div_ceil(DOTS_PER_MM);
+        let width_mm = stock.width_mm();
+        let height_mm = stock.height_mm();
+        let gap_mm = stock.gap_mm();
+        let x_offset = left_dots + (avail_w - width) / 2;
+        let y_offset = (label_h_dots - height) / 2;
 
         let mut job = Vec::new();
-        job.extend_from_slice(format!("SIZE {width_mm} mm,{height_mm} mm\r\n").as_bytes());
-        job.extend_from_slice(b"GAP 0 mm,0 mm\r\n");
+        job.extend_from_slice(format!("SIZE {width_mm:.2} mm,{height_mm:.2} mm\r\n").as_bytes());
+        job.extend_from_slice(format!("GAP {gap_mm:.2} mm,0 mm\r\n").as_bytes());
         job.extend_from_slice(b"CLS\r\n");
-        job.extend_from_slice(format!("BITMAP 0,0,{width_bytes},{height},0,").as_bytes());
+        job.extend_from_slice(
+            format!("BITMAP {x_offset},{y_offset},{width_bytes},{height},0,").as_bytes(),
+        );
         job.extend_from_slice(&raster);
         job.extend_from_slice(b"\r\n");
         job.extend_from_slice(b"PRINT 1,1\r\n");
