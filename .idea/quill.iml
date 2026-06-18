@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/quill_configuration_app/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/quill_lib/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/quill_lib/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/quill_server/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/quill_service/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
