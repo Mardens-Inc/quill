@@ -1,18 +1,31 @@
 use crate::print_orientation::PageOrientation;
+use tracing::debug;
 
 pub fn prepare_image(
     png: &image::RgbImage,
     orientation: PageOrientation,
     scale: f32,
 ) -> image::RgbImage {
+    debug!(
+        "Preparing image: source {}x{} px, scale {scale}, orientation {orientation:?}",
+        png.width(),
+        png.height()
+    );
     let scaled = if scale > 0.0 && (scale - 1.0).abs() > f32::EPSILON {
         let w = ((png.width() as f32 * scale).round() as u32).max(1);
         let h = ((png.height() as f32 * scale).round() as u32).max(1);
+        debug!("Resizing image to {w}x{h} px (scale {scale})");
         image::imageops::resize(png, w, h, image::imageops::FilterType::Lanczos3)
     } else {
         png.clone()
     };
-    rotate(scaled, orientation.degrees())
+    let rotated = rotate(scaled, orientation.degrees());
+    debug!(
+        "Prepared image: output {}x{} px",
+        rotated.width(),
+        rotated.height()
+    );
+    rotated
 }
 
 fn rotate(img: image::RgbImage, degrees: f32) -> image::RgbImage {
@@ -31,6 +44,11 @@ fn rotate(img: image::RgbImage, degrees: f32) -> image::RgbImage {
 }
 
 fn rotate_arbitrary(img: &image::RgbImage, degrees: f32) -> image::RgbImage {
+    debug!(
+        "Rotating image {}x{} px by arbitrary angle {degrees}° (nearest-neighbour onto white canvas)",
+        img.width(),
+        img.height()
+    );
     let theta = degrees.to_radians();
     let (sin, cos) = theta.sin_cos();
     let (w, h) = (img.width() as f32, img.height() as f32);

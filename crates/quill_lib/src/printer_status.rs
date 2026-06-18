@@ -90,7 +90,12 @@ impl From<u32> for PrinterStatus {
             16777216 => PrinterStatus::PowerSave,
             33554432 => PrinterStatus::ServerOffline,
             67108864 => PrinterStatus::DriverUpdateNeeded,
-            _ => panic!("Unknown printer status value: {}", value),
+            _ => {
+                tracing::error!(
+                    "Unknown printer status value {value:#010x}; expected a single PRINTER_STATUS_* flag"
+                );
+                panic!("Unknown printer status value: {}", value)
+            }
         }
     }
 }

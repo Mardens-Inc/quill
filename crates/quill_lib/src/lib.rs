@@ -1,5 +1,6 @@
 use crate::errors::QuillError;
 use std::ffi::{CStr, CString};
+use tracing::error;
 use windows::core::PSTR;
 
 pub mod errors;
@@ -32,6 +33,11 @@ fn pstr_req(p: PSTR) -> String {
 }
 
 fn to_cstring(value: impl Into<String>) -> Result<CString, QuillError> {
-    CString::new(value.into())
-        .map_err(|e| QuillError::StringConversionError("String".into(), "CString".into(), e))
+    CString::new(value.into()).map_err(|e| {
+        error!(
+            "Failed to convert string to CString (interior NUL at byte {}): {e}",
+            e.nul_position()
+        );
+        QuillError::StringConversionError("String".into(), "CString".into(), e)
+    })
 }

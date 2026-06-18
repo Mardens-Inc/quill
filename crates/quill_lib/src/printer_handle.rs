@@ -8,6 +8,7 @@ use windows::Win32::Graphics::Printing::{
     DATATYPES_INFO_1A, DOC_INFO_1A, EndDocPrinter, EndPagePrinter, EnumPrintProcessorDatatypesA,
     PRINTER_HANDLE, StartDocPrinterA, StartPagePrinter, WritePrinter,
 };
+use tracing::{debug, error, info, warn};
 use windows::core::{PCSTR, PSTR};
 
 pub struct PrinterHandle {
@@ -24,11 +25,23 @@ impl PrinterHandle {
         data_type: Option<String>,
     ) -> Result<(), QuillError> {
         let Some(handle) = self.handle else {
+            warn!(
+                "print_bytes called on '{}' but the printer handle is not open",
+                self.info.printer_name
+            );
             return Err(QuillError::PrinterNotOpenedError);
         };
 
-        let doc_name = to_cstring(job_name.as_ref())?;
-        let datatype = to_cstring(data_type.unwrap_or("RAW".into()))?;
+        let job_name = job_name.as_ref();
+        let datatype_str = data_type.unwrap_or_else(|| "RAW".into());
+        debug!(
+            "Spooling {} byte(s) to printer '{}' (job='{job_name}', datatype='{datatype_str}')",
+            bytes.len(),
+            self.info.printer_name
+        );
+
+        let doc_name = to_cstring(job_name)?;
+        let datatype = to_cstring(datatype_str)?;
 
         let job_id = unsafe {
             StartDocPrinterA(
@@ -50,8 +63,17 @@ impl PrinterHandle {
             )
         };
         if job_id == 0 {
-            return Err(QuillError::WindowsError(windows::core::Error::from_thread()));
+            let err = windows::core::Error::from_thread();
+            error!(
+                "StartDocPrinterA failed for job '{job_name}' on '{}': {err}",
+                self.info.printer_name
+            );
+            return Err(QuillError::WindowsError(err));
         }
+        debug!(
+            "Started print job '{job_name}' on '{}' (job_id={job_id})",
+            self.info.printer_name
+        );
 
         let write = (|| -> Result<(), QuillError> {
             unsafe {
@@ -79,10 +101,13 @@ impl PrinterHandle {
                     .map_err(QuillError::WindowsError)?;
                 }
                 if written == 0 {
-                    return Err(QuillError::WindowsError(windows::core::Error::from_thread()));
+                    let err = windows::core::Error::from_thread();
+                    error!("WritePrinter wrote 0 bytes at offset {offset} for job_id={job_id}: {err}");
+                    return Err(QuillError::WindowsError(err));
                 }
                 offset += written as usize;
             }
+            debug!("Spooled {offset} byte(s) for job_id={job_id}");
 
             unsafe {
                 EndPagePrinter(handle)
@@ -91,9 +116,24 @@ impl PrinterHandle {
             }
         })();
 
-        let end = unsafe { EndDocPrinter(handle).ok().map_err(QuillError::WindowsError) };
+        if let Err(e) = &write {
+            error!("Failed while writing page data for job_id={job_id}: {e}");
+        }
 
-        write.and(end)
+        let end = unsafe { EndDocPrinter(handle).ok().map_err(QuillError::WindowsError) };
+        if let Err(e) = &end {
+            error!("EndDocPrinter failed for job_id={job_id}: {e}");
+        }
+
+        let result = write.and(end);
+        if result.is_ok() {
+            info!(
+                "Finished print job '{job_name}' on '{}' ({} byte(s), job_id={job_id})",
+                self.info.printer_name,
+                bytes.len()
+            );
+        }
+        result
     }
 
     pub fn print_png(
@@ -107,6 +147,16 @@ impl PrinterHandle {
         const BRIGHTNESS_THREASHOLD: u32 = 191; // ~25% brightness -> 255-(255*0.25) = 191.25
         const DOTS_PER_MM: f32 = 8.0;
 
+        debug!(
+            "print_png on '{}': source {}x{} px, stock {:.2}x{:.2} mm, orientation {:?}, scale {scale}",
+            self.info.printer_name,
+            png.width(),
+            png.height(),
+            stock.width_mm(),
+            stock.height_mm(),
+            orientation
+        );
+
         let to_dots = |mm: f32| (mm * DOTS_PER_MM).round() as u32;
 
         let label_w_dots = to_dots(stock.width_mm()).max(1);
@@ -115,9 +165,18 @@ impl PrinterHandle {
         let right_dots = to_dots(stock.exposed_liner_right_mm());
         let avail_w = label_w_dots.saturating_sub(left_dots + right_dots).max(1);
         let avail_h = label_h_dots;
+        debug!(
+            "Label geometry: {label_w_dots}x{label_h_dots} dots, liner left={left_dots} right={right_dots}, printable area {avail_w}x{avail_h} dots"
+        );
 
         let rotated = image_processing::prepare_image(png, orientation, 1.0);
         if rotated.width() == 0 || rotated.height() == 0 {
+            warn!(
+                "Prepared image is empty ({}x{}); skipping print job '{}'",
+                rotated.width(),
+                rotated.height(),
+                job_name.as_ref()
+            );
             return Ok(());
         }
         let zoom = if scale > 0.0 { scale } else { 1.0 };
@@ -126,6 +185,11 @@ impl PrinterHandle {
             * zoom;
         let target_w = ((rotated.width() as f32 * fit).round() as u32).max(1);
         let target_h = ((rotated.height() as f32 * fit).round() as u32).max(1);
+        debug!(
+            "Scaling prepared image {}x{} -> {target_w}x{target_h} dots (fit factor {fit:.4}, zoom {zoom})",
+            rotated.width(),
+            rotated.height()
+        );
         let source = image::imageops::resize(
             &rotated,
             target_w,
@@ -160,6 +224,10 @@ impl PrinterHandle {
         let gap_mm = stock.gap_mm();
         let x_offset = left_dots + (avail_w - width) / 2;
         let y_offset = (label_h_dots - height) / 2;
+        debug!(
+            "Built TSPL monochrome raster: {width}x{height} px ({} bytes, {width_bytes} bytes/row) at offset ({x_offset},{y_offset})",
+            raster.len()
+        );
 
         let mut job = Vec::new();
         job.extend_from_slice(format!("SIZE {width_mm:.2} mm,{height_mm:.2} mm\r\n").as_bytes());
@@ -178,6 +246,11 @@ impl PrinterHandle {
     pub fn get_print_processor_data_types(&mut self) -> Result<Vec<String>, QuillError> {
         // DATATYPES_INFO_1 is the only defined level for this API.
         const LEVEL: u32 = 1;
+
+        debug!(
+            "Enumerating supported datatypes for print processor '{}'",
+            self.info.print_processor
+        );
 
         let processor = to_cstring(self.info.print_processor.as_str())?;
         let processor_name = PCSTR(processor.as_ptr().cast());
@@ -198,9 +271,17 @@ impl PrinterHandle {
         if let Err(e) = probe.ok()
             && e.code() != ERROR_INSUFFICIENT_BUFFER.to_hresult()
         {
+            error!(
+                "EnumPrintProcessorDatatypesA probe failed for processor '{}': {e}",
+                self.info.print_processor
+            );
             return Err(QuillError::WindowsError(e));
         }
         if needed == 0 {
+            debug!(
+                "Print processor '{}' reports no supported datatypes",
+                self.info.print_processor
+            );
             self.supported_data_types = Vec::new();
             return Ok(Vec::new());
         }
@@ -221,6 +302,9 @@ impl PrinterHandle {
                 &mut returned,
             )
             .ok()
+            .inspect_err(|e| {
+                error!("EnumPrintProcessorDatatypesA failed to fill buffer: {e}")
+            })
             .map_err(QuillError::WindowsError)?;
         }
 
@@ -231,19 +315,36 @@ impl PrinterHandle {
             out.push(crate::pstr_req(r.pName));
         }
 
+        info!(
+            "Print processor '{}' supports {} datatype(s): {out:?}",
+            self.info.print_processor,
+            out.len()
+        );
         self.supported_data_types = out.clone();
         Ok(out)
     }
 
     pub fn close(&mut self) -> Result<(), QuillError> {
         if let Some(handle) = self.handle {
+            debug!("Closing printer handle for '{}'", self.info.printer_name);
             let result = unsafe {
                 windows::Win32::Graphics::Printing::ClosePrinter(handle)
                     .map_err(QuillError::WindowsError)
             };
             self.handle = None;
+            match &result {
+                Ok(()) => info!("Closed printer handle for '{}'", self.info.printer_name),
+                Err(e) => error!(
+                    "ClosePrinter failed for '{}': {e}",
+                    self.info.printer_name
+                ),
+            }
             result
         } else {
+            warn!(
+                "close called on '{}' but the printer handle was already closed",
+                self.info.printer_name
+            );
             Err(QuillError::PrinterNotOpenedError)
         }
     }

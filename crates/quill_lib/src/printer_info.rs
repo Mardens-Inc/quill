@@ -2,6 +2,7 @@ use crate::errors::QuillError;
 use crate::printer_handle::PrinterHandle;
 use crate::printer_status::PrinterStatus;
 use crate::printers::Printers;
+use tracing::debug;
 
 #[derive(Debug, Clone)]
 pub struct PrinterInfo {
@@ -33,6 +34,7 @@ pub struct PrinterInfo {
 
 impl PrinterInfo {
     pub fn handle(&self)->Result<PrinterHandle, QuillError>{
+        debug!("Acquiring handle for printer '{}'", self.printer_name);
         Printers::get_printer_handle(self.printer_name.as_str())
     }
 }

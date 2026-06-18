@@ -6,6 +6,7 @@ use windows::Win32::Graphics::Printing::{
     EnumPrintersA, OpenPrinterA, PRINTER_DEFAULTSA, PRINTER_ENUM_LOCAL, PRINTER_HANDLE,
     PRINTER_INFO_2A,
 };
+use tracing::{debug, error, info, warn};
 use windows::core::PCSTR;
 pub struct Printers;
 
@@ -15,6 +16,8 @@ impl Printers {
         const LEVEL: u32 = 2;
         let mut needed: u32 = 0;
         let mut returned: u32 = 0;
+
+        debug!("Enumerating local printers (EnumPrintersA, level {LEVEL})");
 
         let probe = unsafe {
             EnumPrintersA(
@@ -29,13 +32,18 @@ impl Printers {
         if let Err(e) = probe
             && e.code() != ERROR_INSUFFICIENT_BUFFER.to_hresult()
         {
+            error!("EnumPrintersA probe failed: {e}");
             return Err(e);
         }
         if needed == 0 {
+            info!("No local printers found");
             return Ok(Vec::new());
         }
 
         let count = (needed as usize).div_ceil(size_of::<PRINTER_INFO_2A>());
+        debug!(
+            "EnumPrintersA requires {needed} bytes; allocating {count} PRINTER_INFO_2A slot(s)"
+        );
         let mut backing: Vec<PRINTER_INFO_2A> = Vec::with_capacity(count);
 
         unsafe {
@@ -50,7 +58,8 @@ impl Printers {
                 Some(bytes),
                 &mut needed,
                 &mut returned,
-            )?;
+            )
+            .inspect_err(|e| error!("EnumPrintersA failed to fill buffer: {e}"))?;
         }
 
         let head = backing.as_ptr();
@@ -79,11 +88,17 @@ impl Printers {
                 average_ppm: r.AveragePPM,
             });
         }
+        info!("Enumerated {} local printer(s)", out.len());
+        debug!(
+            "Printers found: {:?}",
+            out.iter().map(|p| p.printer_name.as_str()).collect::<Vec<_>>()
+        );
         Ok(out)
     }
 
     pub fn get_printer_handle(name: impl AsRef<str>) -> Result<PrinterHandle, QuillError> {
         let name = name.as_ref();
+        debug!("Opening printer handle for '{name}'");
         let mut handle: PRINTER_HANDLE = PRINTER_HANDLE::default();
         let name_c = crate::to_cstring(name)?;
         let result = unsafe {
@@ -95,18 +110,25 @@ impl Printers {
         };
 
         if let Err(e) = result {
+            error!("OpenPrinterA failed for '{name}': {}", e.message());
             return Err(QuillError::PrinterHandleError(e.message()));
         }
 
         match Self::get_available_printers()?
             .iter().find(|p| p.printer_name.eq(name))
         {
-            Some(info) => Ok(PrinterHandle {
-                info: info.clone(),
-                handle: Some(handle),
-                supported_data_types: Vec::new(),
-            }),
+            Some(info) => {
+                info!("Opened printer handle for '{name}'");
+                Ok(PrinterHandle {
+                    info: info.clone(),
+                    handle: Some(handle),
+                    supported_data_types: Vec::new(),
+                })
+            }
             None => {
+                warn!(
+                    "OpenPrinterA succeeded for '{name}' but it was not found in the enumerated printer list"
+                );
                 Err(QuillError::PrinterHandleError("Failed to find printer by name".into()))
             }
         }
