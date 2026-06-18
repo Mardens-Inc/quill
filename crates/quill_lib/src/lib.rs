@@ -9,6 +9,7 @@ pub mod printer_handle;
 mod printer_info;
 pub mod printer_status;
 pub mod printers;
+pub mod stock;
 
 /// Null PSTR -> None; otherwise decode the ANSI (code-page) C string.
 fn pstr_opt(p: PSTR) -> Option<String> {
