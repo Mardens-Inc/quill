@@ -1,6 +1,9 @@
+use crate::errors::QuillError;
+use crate::printer_handle::PrinterHandle;
 use crate::printer_status::PrinterStatus;
+use crate::printers::Printers;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PrinterInfo {
     pub server_name: Option<String>,
     pub printer_name: String,
@@ -25,4 +28,11 @@ pub struct PrinterInfo {
     pub status: PrinterStatus,
     pub jobs: u32,
     pub average_ppm: u32,
+}
+
+
+impl PrinterInfo {
+    pub fn handle(&self)->Result<PrinterHandle, QuillError>{
+        Printers::get_printer_handle(self.printer_name.as_str())
+    }
 }

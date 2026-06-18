@@ -85,9 +85,10 @@ impl Printers {
     pub fn get_printer_handle(name: impl AsRef<str>) -> Result<PrinterHandle, QuillError> {
         let name = name.as_ref();
         let mut handle: PRINTER_HANDLE = PRINTER_HANDLE::default();
+        let name_c = crate::to_cstring(name)?;
         let result = unsafe {
             OpenPrinterA(
-                crate::str_pcstr(name)?,
+                PCSTR(name_c.as_ptr().cast()),
                 &mut handle,
                 Some(&PRINTER_DEFAULTSA::default()),
             )
@@ -97,9 +98,17 @@ impl Printers {
             return Err(QuillError::PrinterHandleError(e.message()));
         }
 
-        Ok(PrinterHandle {
-            handle: Some(handle),
-        })
+        match Self::get_available_printers()?
+            .iter().find(|p| p.printer_name.eq(name))
+        {
+            Some(info) => Ok(PrinterHandle {
+                info: info.clone(),
+                handle: Some(handle),
+                supported_data_types: Vec::new(),
+            }),
+            None => {
+                Err(QuillError::PrinterHandleError("Failed to find printer by name".into()))
+            }
+        }
     }
 }
-
