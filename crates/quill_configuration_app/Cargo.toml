@@ -10,7 +10,7 @@ name = "quill_config"
 path = "src/main.rs"
 
 [dependencies]
-iced = { version = "0.14.0", default-features = false, features = ["tiny-skia", "tokio", "svg"] }
+iced = { version = "0.14.0", default-features = false, features = ["tiny-skia", "wgpu", "tokio", "svg"] }
 tokio = { version = "1", features = ["time"] }
 quill_lib = { path = "../quill_lib" }
 color-eyre = { workspace = true }
