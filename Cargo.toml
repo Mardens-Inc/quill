@@ -3,12 +3,12 @@ resolver = "3"
 members = ["crates/quill_configuration_app", "crates/quill_lib", "crates/quill_server", "crates/quill_service"]
 
 [workspace.dependencies]
-tracing = {version = "0.1.44", features = ["max_level_trace"]}
-
+tracing = { version = "0.1.44", features = ["max_level_trace"] }
+color-eyre = { version = "0.6.5", features = ["track-caller", "tracing-error"] }
 
 [profile.release]
-lto = "fat"
-codegen-units = 10
-opt-level = 3
+lto = true
+codegen-units = 1
+opt-level = "z"
 panic = "abort"
 strip = true
