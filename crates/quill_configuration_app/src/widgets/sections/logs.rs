@@ -1,6 +1,8 @@
 use crate::configuration_app::{ConfigurationApp, LogEntry, Message, Severity, TIME_RANGES, LOG_LEVELS};
 use crate::theme::design;
-use iced::widget::{column, container, pick_list, row, scrollable, text, text_input, Space};
+use iced::border::Radius;
+use iced::font::Weight;
+use iced::widget::{Space, column, container, pick_list, row, scrollable, text, text_input};
 use iced::{Alignment, Background, Border, Color, Element, Length, Padding};
 
 pub fn logs_view<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
@@ -17,23 +19,19 @@ pub fn logs_view<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
     column![
         row![
             column![
-                text("Logs & Diagnostics")
-                    .size(22)
-                    .color(design::FG)
-                    .font(iced::Font {
-                        weight: iced::font::Weight::SemiBold,
-                        ..crate::theme::layout::fonts::INTER
-                    }),
-                iced::widget::Space::with_height(4),
+                text("Logs & Diagnostics").size(22).color(design::FG).font(iced::Font {
+                    weight: Weight::Semibold,
+                    ..crate::theme::layout::fonts::INTER
+                }),
+                Space::new().height(4),
                 text("Live log viewer with filters and remote submission")
-                    .size(13)
-                    .color(design::FG_MUTED),
+                    .size(13).color(design::FG_MUTED),
             ]
             .spacing(0),
-            Space::with_width(Length::Fill),
+            Space::new().width(Length::Fill),
             pick_list(LOG_LEVELS, Some(state.log_level), Message::SetLogLevel)
                 .text_size(12)
-                .padding(Padding::from([6, 10]))
+                .padding(Padding::from([6.0_f32, 10.0]))
                 .style(|_theme, _status| iced::widget::pick_list::Style {
                     text_color: design::FG,
                     placeholder_color: design::FG_SUBTLE,
@@ -43,15 +41,15 @@ pub fn logs_view<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
                 }),
         ]
         .align_y(Alignment::Center),
-        iced::widget::Space::with_height(20),
+        Space::new().height(20),
         filter_bar(state),
-        iced::widget::Space::with_height(12),
+        Space::new().height(12),
         action_bar(state, visible.len()),
-        iced::widget::Space::with_height(12),
+        Space::new().height(12),
         log_table(state, &visible),
-        iced::widget::Space::with_height(16),
+        Space::new().height(16),
         remote_card(state),
-        iced::widget::Space::with_height(16),
+        Space::new().height(16),
         log_file_card(),
     ]
     .spacing(0)
@@ -64,7 +62,7 @@ fn filter_bar<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
         iced::widget::button(
             text(label).size(11).color(if active { design::FG } else { design::FG_MUTED }),
         )
-        .padding(Padding::from([4, 10]))
+        .padding(Padding::from([4.0_f32, 10.0]))
         .on_press(msg)
         .style(move |_theme, status| {
             let hov = matches!(status, iced::widget::button::Status::Hovered);
@@ -91,7 +89,7 @@ fn filter_bar<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
     row![
         text_input("Search logs…", &state.search)
             .on_input(Message::SetSearch)
-            .padding(Padding::from([7, 12]))
+            .padding(Padding::from([7.0_f32, 12.0]))
             .size(12)
             .width(Length::Fixed(220.0))
             .style(|_theme, _status| iced::widget::text_input::Style {
@@ -102,20 +100,20 @@ fn filter_bar<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
                 value: design::FG,
                 selection: design::ACCENT_SOFT,
             }),
-        iced::widget::Space::with_width(10),
+        Space::new().width(10),
         sev_chip("TRACE", state.sev_filter.trace, Message::ToggleSevTrace),
-        iced::widget::Space::with_width(4),
+        Space::new().width(4),
         sev_chip("DEBUG", state.sev_filter.debug, Message::ToggleSevDebug),
-        iced::widget::Space::with_width(4),
+        Space::new().width(4),
         sev_chip("INFO", state.sev_filter.info, Message::ToggleSevInfo),
-        iced::widget::Space::with_width(4),
+        Space::new().width(4),
         sev_chip("WARN", state.sev_filter.warn, Message::ToggleSevWarn),
-        iced::widget::Space::with_width(4),
+        Space::new().width(4),
         sev_chip("ERROR", state.sev_filter.error, Message::ToggleSevError),
-        Space::with_width(Length::Fill),
+        Space::new().width(Length::Fill),
         pick_list(TIME_RANGES, Some(state.time_range), Message::SetTimeRange)
             .text_size(11)
-            .padding(Padding::from([6, 10]))
+            .padding(Padding::from([6.0_f32, 10.0]))
             .style(|_theme, _status| iced::widget::pick_list::Style {
                 text_color: design::FG,
                 placeholder_color: design::FG_SUBTLE,
@@ -129,32 +127,38 @@ fn filter_bar<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
 }
 
 fn action_bar<'a>(state: &'a ConfigurationApp, count: usize) -> Element<'a, Message> {
+    let live_tail = state.live_tail;
+
+    let live_dot: Element<'_, Message> = if live_tail {
+        container(Space::new())
+            .width(Length::Fixed(8.0))
+            .height(Length::Fixed(8.0))
+            .style(|_theme: &iced::Theme| container::Style {
+                background: Some(Background::Color(design::SUCCESS_FG)),
+                border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 99.0.into() },
+                ..container::Style::default()
+            })
+            .into()
+    } else {
+        Space::new().width(0).into()
+    };
+
     let live_tail_btn = iced::widget::button(
         row![
-            if state.live_tail {
-                container(iced::widget::Space::new(8, 8))
-                    .style(|_| container::Style {
-                        background: Some(Background::Color(design::SUCCESS_FG)),
-                        border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 99.0.into() },
-                        ..container::Style::default()
-                    })
-                    .into()
-            } else {
-                iced::widget::Space::with_width(0).into()
-            },
-            if state.live_tail { iced::widget::Space::with_width(6).into() } else { iced::widget::Space::with_width(0).into() },
-            text(if state.live_tail { "Live Tail ON" } else { "Live Tail" })
+            live_dot,
+            Space::new().width(if live_tail { 6 } else { 0 }),
+            text(if live_tail { "Live Tail ON" } else { "Live Tail" })
                 .size(12)
-                .color(if state.live_tail { design::SUCCESS_FG } else { design::FG_MUTED }),
+                .color(if live_tail { design::SUCCESS_FG } else { design::FG_MUTED }),
         ]
         .align_y(Alignment::Center),
     )
-    .padding(Padding::from([6, 12]))
+    .padding(Padding::from([6.0_f32, 12.0]))
     .on_press(Message::ToggleLiveTail)
     .style(move |_theme, status| {
         let hov = matches!(status, iced::widget::button::Status::Hovered);
         iced::widget::button::Style {
-            background: Some(Background::Color(if state.live_tail {
+            background: Some(Background::Color(if live_tail {
                 design::SUCCESS_BG
             } else if hov {
                 design::HOVER
@@ -162,51 +166,45 @@ fn action_bar<'a>(state: &'a ConfigurationApp, count: usize) -> Element<'a, Mess
                 design::SURFACE2
             })),
             border: Border {
-                color: if state.live_tail { design::SUCCESS_FG } else { design::BORDER },
+                color: if live_tail { design::SUCCESS_FG } else { design::BORDER },
                 width: 1.0,
                 radius: 99.0.into(),
             },
-            text_color: if state.live_tail { design::SUCCESS_FG } else { design::FG_MUTED },
+            text_color: if live_tail { design::SUCCESS_FG } else { design::FG_MUTED },
             ..iced::widget::button::Style::default()
         }
     });
 
-    let count_text = text(format!("{} entries", count)).size(12).color(design::FG_MUTED);
-
-    let clear_btn = iced::widget::button(text("Clear").size(12).color(design::FG_MUTED))
-        .padding(Padding::from([6, 12]))
-        .on_press(Message::ClearLogs)
-        .style(|_theme, status| {
-            let hov = matches!(status, iced::widget::button::Status::Hovered);
-            iced::widget::button::Style {
-                background: Some(Background::Color(if hov { design::HOVER } else { design::SURFACE2 })),
-                border: Border { color: design::BORDER, width: 1.0, radius: 6.0.into() },
-                text_color: design::FG_MUTED,
-                ..iced::widget::button::Style::default()
-            }
-        });
-
-    let export_btn = iced::widget::button(text("Export").size(12).color(design::FG_MUTED))
-        .padding(Padding::from([6, 12]))
-        .on_press(Message::ExportLogs)
-        .style(|_theme, status| {
-            let hov = matches!(status, iced::widget::button::Status::Hovered);
-            iced::widget::button::Style {
-                background: Some(Background::Color(if hov { design::HOVER } else { design::SURFACE2 })),
-                border: Border { color: design::BORDER, width: 1.0, radius: 6.0.into() },
-                text_color: design::FG_MUTED,
-                ..iced::widget::button::Style::default()
-            }
-        });
-
     row![
         live_tail_btn,
-        iced::widget::Space::with_width(12),
-        count_text,
-        Space::with_width(Length::Fill),
-        clear_btn,
-        iced::widget::Space::with_width(8),
-        export_btn,
+        Space::new().width(12),
+        text(format!("{} entries", count)).size(12).color(design::FG_MUTED),
+        Space::new().width(Length::Fill),
+        iced::widget::button(text("Clear").size(12).color(design::FG_MUTED))
+            .padding(Padding::from([6.0_f32, 12.0]))
+            .on_press(Message::ClearLogs)
+            .style(|_theme, status| {
+                let hov = matches!(status, iced::widget::button::Status::Hovered);
+                iced::widget::button::Style {
+                    background: Some(Background::Color(if hov { design::HOVER } else { design::SURFACE2 })),
+                    border: Border { color: design::BORDER, width: 1.0, radius: 6.0.into() },
+                    text_color: design::FG_MUTED,
+                    ..iced::widget::button::Style::default()
+                }
+            }),
+        Space::new().width(8),
+        iced::widget::button(text("Export").size(12).color(design::FG_MUTED))
+            .padding(Padding::from([6.0_f32, 12.0]))
+            .on_press(Message::ExportLogs)
+            .style(|_theme, status| {
+                let hov = matches!(status, iced::widget::button::Status::Hovered);
+                iced::widget::button::Style {
+                    background: Some(Background::Color(if hov { design::HOVER } else { design::SURFACE2 })),
+                    border: Border { color: design::BORDER, width: 1.0, radius: 6.0.into() },
+                    text_color: design::FG_MUTED,
+                    ..iced::widget::button::Style::default()
+                }
+            }),
     ]
     .align_y(Alignment::Center)
     .into()
@@ -216,30 +214,34 @@ fn log_table<'a>(state: &'a ConfigurationApp, entries: &[&'a LogEntry]) -> Eleme
     let header = container(
         row![
             text("TIMESTAMP").size(10).color(design::FG_SUBTLE).font(iced::Font {
-                weight: iced::font::Weight::SemiBold,
+                weight: Weight::Semibold,
                 ..crate::theme::layout::fonts::INTER
             }).width(Length::Fixed(110.0)),
             text("SEV").size(10).color(design::FG_SUBTLE).font(iced::Font {
-                weight: iced::font::Weight::SemiBold,
+                weight: Weight::Semibold,
                 ..crate::theme::layout::fonts::INTER
             }).width(Length::Fixed(56.0)),
             text("SOURCE").size(10).color(design::FG_SUBTLE).font(iced::Font {
-                weight: iced::font::Weight::SemiBold,
+                weight: Weight::Semibold,
                 ..crate::theme::layout::fonts::INTER
             }).width(Length::Fixed(80.0)),
             text("MESSAGE").size(10).color(design::FG_SUBTLE).font(iced::Font {
-                weight: iced::font::Weight::SemiBold,
+                weight: Weight::Semibold,
                 ..crate::theme::layout::fonts::INTER
             }).width(Length::Fill),
         ]
         .align_y(Alignment::Center)
         .spacing(0),
     )
-    .padding(Padding::from([8, 12]))
+    .padding(Padding::from([8.0_f32, 12.0]))
     .width(Length::Fill)
     .style(|_| container::Style {
         background: Some(Background::Color(design::SURFACE2)),
-        border: Border { color: design::BORDER, width: 1.0, radius: [8.0, 8.0, 0.0, 0.0].into() },
+        border: Border {
+            color: design::BORDER,
+            width: 1.0,
+            radius: Radius { top_left: 8.0, top_right: 8.0, bottom_right: 0.0, bottom_left: 0.0 },
+        },
         ..container::Style::default()
     });
 
@@ -249,14 +251,17 @@ fn log_table<'a>(state: &'a ConfigurationApp, entries: &[&'a LogEntry]) -> Eleme
         rows_col = rows_col.push(
             container(
                 text("No log entries match the current filters.")
-                    .size(13)
-                    .color(design::FG_MUTED),
+                    .size(13).color(design::FG_MUTED),
             )
-            .padding(Padding::from([24, 16]))
+            .padding(Padding::from([24.0_f32, 16.0]))
             .center_x(Length::Fill)
             .style(|_| container::Style {
                 background: Some(Background::Color(design::SURFACE)),
-                border: Border { color: design::BORDER, width: 1.0, radius: [0.0, 0.0, 8.0, 8.0].into() },
+                border: Border {
+                    color: design::BORDER,
+                    width: 1.0,
+                    radius: Radius { top_left: 0.0, top_right: 0.0, bottom_right: 8.0, bottom_left: 8.0 },
+                },
                 ..container::Style::default()
             }),
         );
@@ -280,23 +285,20 @@ fn log_table<'a>(state: &'a ConfigurationApp, entries: &[&'a LogEntry]) -> Eleme
 
 fn log_row<'a>(state: &'a ConfigurationApp, entry: &'a LogEntry, is_last: bool) -> Element<'a, Message> {
     let radius = if is_last {
-        [0.0_f32, 0.0, 8.0, 8.0].into()
+        Radius { top_left: 0.0, top_right: 0.0, bottom_right: 8.0, bottom_left: 8.0 }
     } else {
-        0.0.into()
+        Radius { top_left: 0.0, top_right: 0.0, bottom_right: 0.0, bottom_left: 0.0 }
     };
 
     let (sev_fg, sev_bg) = sev_colors(entry.severity);
 
     let sev_badge = container(
-        text(format!("{}", entry.severity))
-            .size(9)
-            .color(sev_fg)
-            .font(iced::Font {
-                weight: iced::font::Weight::Bold,
-                ..crate::theme::layout::fonts::INTER
-            }),
+        text(format!("{}", entry.severity)).size(9).color(sev_fg).font(iced::Font {
+            weight: Weight::Bold,
+            ..crate::theme::layout::fonts::INTER
+        }),
     )
-    .padding(Padding::from([2, 5]))
+    .padding(Padding::from([2.0_f32, 5.0]))
     .style(move |_| container::Style {
         background: Some(Background::Color(sev_bg)),
         border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 3.0.into() },
@@ -308,26 +310,21 @@ fn log_row<'a>(state: &'a ConfigurationApp, entry: &'a LogEntry, is_last: bool) 
 
     let row_content = row![
         text(entry.timestamp.as_str())
-            .size(11)
-            .color(design::FG_SUBTLE)
+            .size(11).color(design::FG_SUBTLE)
             .font(crate::theme::layout::fonts::JETBRAINS_MONO)
             .width(Length::Fixed(110.0)),
         container(sev_badge).width(Length::Fixed(56.0)),
         text(entry.source.as_str())
-            .size(11)
-            .color(design::FG_MUTED)
+            .size(11).color(design::FG_MUTED)
             .font(crate::theme::layout::fonts::JETBRAINS_MONO)
             .width(Length::Fixed(80.0)),
-        text(entry.message.as_str())
-            .size(12)
-            .color(design::FG)
-            .width(Length::Fill),
+        text(entry.message.as_str()).size(12).color(design::FG).width(Length::Fill),
     ]
     .align_y(Alignment::Center)
     .spacing(0);
 
     let row_btn = iced::widget::button(row_content)
-        .padding(Padding::from([7, 12]))
+        .padding(Padding::from([7.0_f32, 12.0]))
         .width(Length::Fill)
         .on_press(Message::ExpandLog(entry_id))
         .style(move |_theme, status| {
@@ -351,11 +348,10 @@ fn log_row<'a>(state: &'a ConfigurationApp, entry: &'a LogEntry, is_last: bool) 
             row_btn,
             container(
                 text(format!("Full message: {}", entry.message))
-                    .size(11)
-                    .color(design::FG_MUTED)
+                    .size(11).color(design::FG_MUTED)
                     .font(crate::theme::layout::fonts::JETBRAINS_MONO),
             )
-            .padding(Padding::from([8, 12]))
+            .padding(Padding::from([8.0_f32, 12.0]))
             .width(Length::Fill)
             .style(move |_| container::Style {
                 background: Some(Background::Color(design::SURFACE_ALT)),
@@ -381,29 +377,27 @@ fn sev_colors(sev: Severity) -> (Color, Color) {
 }
 
 fn remote_card<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
+    let remote_enabled = state.remote_enabled;
+    let remote_sending = state.remote_sending;
+
     let toggle_btn = iced::widget::button(
         row![
-            container(iced::widget::Space::new(0, 0))
+            container(Space::new())
                 .width(Length::Fixed(34.0))
                 .height(Length::Fixed(18.0))
                 .style(move |_| container::Style {
-                    background: Some(Background::Color(if state.remote_enabled {
-                        design::ACCENT
-                    } else {
-                        design::SURFACE2
-                    })),
+                    background: Some(Background::Color(if remote_enabled { design::ACCENT } else { design::SURFACE2 })),
                     border: Border { color: design::BORDER_STRONG, width: 1.0, radius: 99.0.into() },
                     ..container::Style::default()
                 }),
-            iced::widget::Space::with_width(8),
-            text(if state.remote_enabled { "Enabled" } else { "Disabled" })
-                .size(12)
-                .color(if state.remote_enabled { design::FG } else { design::FG_MUTED }),
+            Space::new().width(8),
+            text(if remote_enabled { "Enabled" } else { "Disabled" })
+                .size(12).color(if remote_enabled { design::FG } else { design::FG_MUTED }),
         ]
         .align_y(Alignment::Center),
     )
-    .padding(Padding::from([0, 0]))
-    .on_press(Message::SetRemoteEnabled(!state.remote_enabled))
+    .padding(Padding::from([0.0_f32, 0.0]))
+    .on_press(Message::SetRemoteEnabled(!remote_enabled))
     .style(|_theme, _status| iced::widget::button::Style {
         background: None,
         border: Border { color: Color::TRANSPARENT, width: 0.0, radius: 0.0.into() },
@@ -411,14 +405,14 @@ fn remote_card<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
         ..iced::widget::button::Style::default()
     });
 
-    let remote_fields: Element<'_, Message> = if state.remote_enabled {
+    let remote_fields: Element<'_, Message> = if remote_enabled {
         column![
-            iced::widget::Space::with_height(14),
+            Space::new().height(14),
             text("Endpoint URL").size(11).color(design::FG_MUTED),
-            iced::widget::Space::with_height(4),
+            Space::new().height(4),
             text_input("https://logs.example.com/ingest", &state.remote_url)
                 .on_input(Message::SetRemoteUrl)
-                .padding(Padding::from([8, 12]))
+                .padding(Padding::from([8.0_f32, 12.0]))
                 .size(12)
                 .width(Length::Fill)
                 .style(|_theme, _status| iced::widget::text_input::Style {
@@ -429,12 +423,12 @@ fn remote_card<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
                     value: design::FG,
                     selection: design::ACCENT_SOFT,
                 }),
-            iced::widget::Space::with_height(10),
+            Space::new().height(10),
             text("Authorization Header").size(11).color(design::FG_MUTED),
-            iced::widget::Space::with_height(4),
+            Space::new().height(4),
             text_input("Bearer <token>", &state.remote_auth)
                 .on_input(Message::SetRemoteAuth)
-                .padding(Padding::from([8, 12]))
+                .padding(Padding::from([8.0_f32, 12.0]))
                 .size(12)
                 .width(Length::Fill)
                 .style(|_theme, _status| iced::widget::text_input::Style {
@@ -445,20 +439,19 @@ fn remote_card<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
                     value: design::FG,
                     selection: design::ACCENT_SOFT,
                 }),
-            iced::widget::Space::with_height(12),
+            Space::new().height(12),
             row![
-                Space::with_width(Length::Fill),
+                Space::new().width(Length::Fill),
                 iced::widget::button(
-                    text(if state.remote_sending { "Sending…" } else { "Send Logs" })
-                        .size(12)
-                        .color(Color::WHITE),
+                    text(if remote_sending { "Sending…" } else { "Send Logs" })
+                        .size(12).color(Color::WHITE),
                 )
-                .padding(Padding::from([7, 14]))
-                .on_press_maybe(if state.remote_sending { None } else { Some(Message::SendRemoteLogs) })
+                .padding(Padding::from([7.0_f32, 14.0]))
+                .on_press_maybe(if remote_sending { None } else { Some(Message::SendRemoteLogs) })
                 .style(move |_theme, status| {
                     let hov = matches!(status, iced::widget::button::Status::Hovered);
                     iced::widget::button::Style {
-                        background: Some(Background::Color(if state.remote_sending {
+                        background: Some(Background::Color(if remote_sending {
                             Color { a: 0.5, ..design::ACCENT }
                         } else if hov {
                             design::ACCENT_HOVER
@@ -470,38 +463,40 @@ fn remote_card<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
                         ..iced::widget::button::Style::default()
                     }
                 }),
-                if !state.remote_status.is_empty() {
+            ]
+            .align_y(Alignment::Center),
+            {
+                let status_text: Element<'_, Message> = if !state.remote_status.is_empty() {
                     row![
-                        iced::widget::Space::with_width(12),
+                        Space::new().width(12),
                         text(state.remote_status.as_str()).size(11).color(design::FG_MUTED),
                     ]
                     .into()
                 } else {
-                    iced::widget::Space::with_width(0).into()
-                },
-            ]
-            .align_y(Alignment::Center),
+                    Space::new().width(0).into()
+                };
+                status_text
+            },
         ]
         .spacing(0)
         .into()
     } else {
-        iced::widget::Space::with_height(0).into()
+        Space::new().into()
     };
 
     card(column![
         row![
             text("Remote Log Submission").size(14).color(design::FG).font(iced::Font {
-                weight: iced::font::Weight::SemiBold,
+                weight: Weight::Semibold,
                 ..crate::theme::layout::fonts::INTER
             }),
-            Space::with_width(Length::Fill),
+            Space::new().width(Length::Fill),
             toggle_btn,
         ]
         .align_y(Alignment::Center),
-        iced::widget::Space::with_height(4),
+        Space::new().height(4),
         text("Forward log entries to a remote HTTP endpoint in real time.")
-            .size(12)
-            .color(design::FG_MUTED),
+            .size(12).color(design::FG_MUTED),
         remote_fields,
     ]
     .spacing(0))
@@ -510,28 +505,27 @@ fn remote_card<'a>(state: &'a ConfigurationApp) -> Element<'a, Message> {
 fn log_file_card<'a>() -> Element<'a, Message> {
     card(column![
         text("Log File Location").size(14).color(design::FG).font(iced::Font {
-            weight: iced::font::Weight::SemiBold,
+            weight: Weight::Semibold,
             ..crate::theme::layout::fonts::INTER
         }),
-        iced::widget::Space::with_height(10),
+        Space::new().height(10),
         row![
             container(
                 text("%APPDATA%\\Quill\\logs\\quill.log")
-                    .size(12)
-                    .color(design::FG_MUTED)
+                    .size(12).color(design::FG_MUTED)
                     .font(crate::theme::layout::fonts::JETBRAINS_MONO),
             )
-            .padding(Padding::from([7, 12]))
+            .padding(Padding::from([7.0_f32, 12.0]))
             .width(Length::Fill)
             .style(|_| container::Style {
                 background: Some(Background::Color(design::SURFACE2)),
                 border: Border { color: design::BORDER, width: 1.0, radius: 6.0.into() },
                 ..container::Style::default()
             }),
-            iced::widget::Space::with_width(8),
+            Space::new().width(8),
             iced::widget::button(text("Open Folder").size(12).color(design::FG_MUTED))
-                .padding(Padding::from([7, 12]))
-                .on_press(Message::ExportLogs) // reuse export as placeholder
+                .padding(Padding::from([7.0_f32, 12.0]))
+                .on_press(Message::ExportLogs)
                 .style(|_theme, status| {
                     let hov = matches!(status, iced::widget::button::Status::Hovered);
                     iced::widget::button::Style {
@@ -550,14 +544,10 @@ fn log_file_card<'a>() -> Element<'a, Message> {
 fn card<'a>(content: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
     container(content)
         .width(Length::Fill)
-        .padding(Padding::from([20, 20]))
+        .padding(Padding::from([20.0_f32, 20.0]))
         .style(|_| container::Style {
             background: Some(Background::Color(design::SURFACE)),
-            border: Border {
-                color: design::BORDER_STRONG,
-                width: 1.0,
-                radius: 10.0.into(),
-            },
+            border: Border { color: design::BORDER_STRONG, width: 1.0, radius: 10.0.into() },
             ..container::Style::default()
         })
         .into()
