@@ -1,5 +1,5 @@
 # Quill
-
+[![wakatime](https://wakatime.com/badge/user/ff32311f-9fbb-4819-9f8b-f2fd0665c2a6/project/d7c36658-f50d-416e-a681-d657f2ac7e4c.svg)](https://wakatime.com/badge/user/ff32311f-9fbb-4819-9f8b-f2fd0665c2a6/project/d7c36658-f50d-416e-a681-d657f2ac7e4c)   
 A local print agent that lets the Mardens Pricing App print price/label tags to a
 TSC label printer **without the browser's native print dialog**.
 
