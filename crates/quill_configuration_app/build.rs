@@ -12,9 +12,12 @@ fn icon() {
         println!("cargo:rerun-if-changed={}", path);
         let mut res = winresource::WindowsResource::new();
         res.set_icon(path);
-        res.set("CompanyName", "LFInteractive LLC.");
-        res.set("FileDescription", "A modern SFTP, FTP, and cloud storage explorer with a built-in shell and code editor — designed for keyboards, made for the dark.");
-        res.set("ProductName", "QuaySFTP");
+        res.set("CompanyName", "Mardens Inc");
+        res.set(
+            "FileDescription",
+            "A configuration interface for the quill auto print system",
+        );
+        res.set("ProductName", "Quill Configurator");
 
         res.compile().unwrap();
     }
