@@ -1,46 +1,57 @@
 import React from "react";
 import {BrowserRouter, Route, Routes} from "react-router-dom";
 import ReactDOM from "react-dom/client";
-import $ from "jquery";
 
-import "./assets/css/index.css";
-import Home from "./assets/pages/Home.tsx";
-import Navigation from "./assets/components/Navigation.tsx";
-import {ThemeProvider} from "./assets/providers/ThemeProvider.tsx";
+import "./css/index.css";
+import PrinterSetupPage from "./pages/PrinterSetupPage.tsx";
+import WindowChrome from "./components/WindowChrome.tsx";
 import {Toast} from "@heroui/react";
 import {attachConsoleToTracing} from "./util/logger.ts";
+import {QuillSettingsProvider} from "./providers/QuillSettingsProvider.tsx";
+import {SidePanel} from "./components/SidePanel.tsx";
+import {LabelStocksPage} from "./pages/LabelStocksPage.tsx";
+import {PrintSettingsPage} from "./pages/PrintSettingsPage.tsx";
+import {ServerSecurityPage} from "./pages/ServerSecurityPage.tsx";
+import {LogsPage} from "./pages/LogsPage.tsx";
+import {AboutPage} from "./pages/AboutPage.tsx";
 
 // Route all console output and uncaught errors through the Rust tracing
 // pipeline so frontend logs land in the same rolling log files as native logs.
 attachConsoleToTracing();
 
-ReactDOM.createRoot($("#root")[0]!).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
         <BrowserRouter>
-            <ThemeProvider>
+            <QuillSettingsProvider>
                 <MainContentRenderer/>
-            </ThemeProvider>
+            </QuillSettingsProvider>
         </BrowserRouter>
     </React.StrictMode>
 );
 
 export function MainContentRenderer()
 {
-    $(window).on("contextmenu", e => e.preventDefault());
+    window.addEventListener("message", (e) => e.preventDefault());
     return (
         <>
             <Toast.Provider placement={"bottom end"}/>
             <main className={"flex flex-col p-0 m-0"}>
-                <Navigation/>
-                
-                <div className={"flex flex-row w-full max-h-[calc(100vh-2.5rem)] h-screen overflow-y-hidden p-0 m-0"} data-tauri-drag-region="">
+                <WindowChrome/>
+
+                <div className={"flex flex-row w-full max-h-[calc(100vh-48px)] h-screen overflow-y-hidden p-0 m-0 gap-2"}>
+                    <SidePanel/>
                     <Routes>
                         <Route>
-                            <Route path="/" element={<Home/>}/>
+                            <Route path="/" element={<PrinterSetupPage/>}/>
+                            <Route path="/stocks" element={<LabelStocksPage/>}/>
+                            <Route path="/print-settings" element={<PrintSettingsPage/>}/>
+                            <Route path="/security" element={<ServerSecurityPage/>}/>
+                            <Route path="/logs" element={<LogsPage/>}/>
+                            <Route path="/about" element={<AboutPage/>}/>
                         </Route>
                     </Routes>
                 </div>
-                
+
             </main>
         </>
     );
