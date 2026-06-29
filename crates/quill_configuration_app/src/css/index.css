@@ -1,60 +1,204 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
-
 @import "tailwindcss";
 @import "@heroui/styles";
 
-/* Expose Roboto as the default sans font for Tailwind utilities */
-@theme {
-  --font-sans: 'Roboto', sans-serif;
-}
+@custom-variant dark (&:where(.dark, .dark *));
 
-/* Brand theme overrides (HeroUI v3 uses `accent` where v2 used `primary`).
-   Un-layered :root declarations win over HeroUI's layered defaults. */
-:root,
-[data-theme="light"] {
-  --accent: #f13848;
-  --accent-foreground: #ffffff;
-  --background: #e3e3ea;
-}
-
-.dark,
-[data-theme="dark"] {
-  --accent: #ff3247;
-  --background: #18181b;
+html, body {
+    @apply font-sans bg-app text-fg;
 }
 
 :root {
-  --scrollbar-background-color: transparent;
-  --scrollbar-thumb-color: var(--accent);
-  --scrollbar-thumb-hover-color: var(--accent);
-  overflow: auto;
-  scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-background-color);
-  scrollbar-width: thin;
-  scrollbar-gutter: stable;
-}
-
-body {
-  font-family: 'Roboto', sans-serif;
+    --scrollbar-background-color: transparent;
+    --scrollbar-thumb-color: var(--color-border-strong);
+    --scrollbar-thumb-hover-color: var(--color-fg-subtle);
+    overflow: auto;
+    scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-background-color);
+    scrollbar-width: thin;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 ::-webkit-scrollbar {
-  width: 12px;
+    width: 11px;
+    height: 11px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--scrollbar-background-color);
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-thumb-color);
-  border-radius: 10px;
+    background: var(--color-border-strong);
+    border-radius: 99px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--scrollbar-thumb-hover-color);
+    background: var(--color-fg-subtle);
+    background-clip: padding-box;
 }
 
 ::selection {
-  background-color: var(--accent);
-  color: var(--background);
+    @apply bg-accent cursor-text text-white;
+}
+
+/* Range inputs (sliders) match the design's accent thumb on a track */
+input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 5px;
+    border-radius: 99px;
+    background: var(--color-surface-alt);
+    outline: none;
+}
+
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    cursor: pointer;
+    border: 3px solid var(--color-surface);
+    box-shadow: 0 1px 5px rgba(0, 0, 0, .5);
+}
+
+input::placeholder {
+    color: var(--color-fg-subtle);
+}
+
+input:focus-visible,
+button:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+}
+
+@keyframes qspin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes qpulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: .4;
+    }
+}
+
+@keyframes qtoast {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@theme {
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-sans: 'Manrope', sans-serif, system-ui;
+
+    /* ---- Accent (ember) ---- */
+    --color-accent: #e8552e;
+    --color-accent-hover: #d8431d;
+    --color-accent-soft: rgba(232, 85, 46, 0.16);
+    --color-accent-sidebar: #f7dfd6;
+    --accent-grad: linear-gradient(135deg, #f2682f, #e23d2a);
+
+    /* Plain accent var kept for scrollbar/legacy references */
+    --accent: var(--color-accent);
+
+    /* ---- Surfaces ---- */
+    --color-app: #f6f5f3;
+    --color-surface: #ffffff;
+    --color-surface-2: #faf9f7;
+    --color-surface-alt: #f0efec;
+    --color-topbar: #ffffff;
+    --color-sidebar: #faf9f7;
+    --color-hover: #f0efec;
+    --color-success-soft: #e3f4e9;
+    --color-success-soft-foreground: #16a34a;
+
+    /* ---- Borders ---- */
+    --color-border: #e7e5e1;
+    --color-border-strong: #d6d3cd;
+
+    /* ---- Foreground ---- */
+    --color-fg: #1c1b19;
+    --color-fg-muted: #6f6d67;
+    --color-fg-subtle: #9c9a93;
+
+    /* ---- Inputs ---- */
+    --color-input: #ffffff;
+    --color-input-border: #d6d3cd;
+
+    /* ---- Card shadow ---- */
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, .04), 0 1px 3px rgba(0, 0, 0, .06);
+
+    /* ---- Backward-compatible aliases for existing class names ---- */
+    --color-surface-0: var(--color-surface);
+    --color-surface-1: var(--color-app);
+    --color-surface-3: var(--color-border-strong);
+    --color-ink-0: var(--color-fg);
+    --color-ink-1: var(--color-fg);
+    --color-ink-2: var(--color-fg-muted);
+    --color-ink-3: var(--color-fg-subtle);
+    --color-background: var(--color-app);
+
+    /* Font Sizes */
+    --text-tiny: 10px;
+    --text-xxs: 10.5px;
+    --text-xs: 11px;
+    --text-xs-plus: 11.5px;
+    --text-sm: 12px;
+    --text-sm-plus: 12.5px;
+    --text-md: 13px;
+    --text-md-plus: 13.5px;
+    --text-base: 14px;
+    --text-base-plus: 14.5px;
+    --text-lg: 15px;
+    --text-xl: 16px;
+    --text-2xl: 19px;
+    --text-3xl: 20px;
+    --text-display: 30px;
+}
+
+.dark {
+    /* ---- Surfaces ---- */
+    --color-app: #0a0a0c;
+    --color-surface: #161619;
+    --color-surface-2: #1d1d21;
+    --color-surface-alt: #1f1f24;
+    --color-topbar: #0d0d0f;
+    --color-sidebar: #0a0a0c;
+    --color-hover: rgba(255, 255, 255, 0.06);
+    --color-success-soft: #152a1f;
+    --color-success-soft-foreground: #16a34a;
+    --color-accent-sidebar: #2d1611;
+
+    /* ---- Borders ---- */
+    --color-border: rgba(255, 255, 255, 0.07);
+    --color-border-strong: rgba(255, 255, 255, 0.14);
+
+    /* ---- Foreground ---- */
+    --color-fg: #f5f5f4;
+    --color-fg-muted: #a1a1a6;
+    --color-fg-subtle: #6e6e76;
+
+    /* ---- Inputs ---- */
+    --color-input: #161619;
+    --color-input-border: rgba(255, 255, 255, 0.12);
+
+    /* ---- Card shadow ---- */
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
