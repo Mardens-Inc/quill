@@ -15,9 +15,11 @@
     "windows": [
       {
         "title": "Quill Confgurator",
-        "width": 800,
+        "width": 1280,
         "height": 600,
-        "decorations": false
+        "minHeight": 400,
+        "minWidth": 930,
+        "decorations": true
         
       }
     ],
