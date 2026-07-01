@@ -129,6 +129,8 @@ select:focus-visible {
     --color-hover: #f0efec;
     --color-success-soft: #e3f4e9;
     --color-success-soft-foreground: #16a34a;
+    --color-info: rgba(37, 99, 235, 0.07);
+    --color-info-fg: rgb(29, 78, 216);
 
     /* ---- Borders ---- */
     --color-border: #e7e5e1;
@@ -249,7 +251,7 @@ select:focus-visible {
         @apply flex justify-end gap-2.5 px-6 py-4 border-t border-border bg-surface-2;
     }
 
-    .textfield, .number-field {
+    .textfield, .number-field, .slider {
         .label {
             @apply text-sm-plus font-bold mb-1.5;
         }
@@ -261,6 +263,11 @@ select:focus-visible {
         .description {
             @apply text-xs-plus mt-1.5 text-fg-subtle;
         }
+    }
+
+
+    .input{
+        @apply rounded-lg border border-input-border text-base h-10 px-3.25 bg-input text-fg font-mono text-md-plus;
     }
 
     .table-root {
@@ -283,7 +290,8 @@ select:focus-visible {
             @apply h-10.75;
         }
     }
-    .table__column{
+
+    .table__column {
         @apply font-bold text-xs tracking-[0.04em] text-fg-subtle;
     }
 
@@ -298,6 +306,22 @@ select:focus-visible {
 
     .table__header tr th {
         @apply border-b border-border
+    }
+
+    .tabs__list, .tabs__indicator {
+        @apply rounded-lg;
+    }
+
+    .select__trigger {
+        @apply rounded-lg border border-input-border px-3.25 bg-input;
+    }
+
+    .select__value {
+        @apply text-fg font-mono text-base;
+    }
+
+    .select__popover {
+        @apply text-fg font-mono text-base rounded-lg;
     }
 
 }

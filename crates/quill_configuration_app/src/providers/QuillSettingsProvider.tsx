@@ -7,6 +7,12 @@ type QuillSettings = {
     selectedPrinter: string | undefined,
     labels: LabelStock[],
     helperServicePort: number,
+    density: number,
+    printIps: number,
+    defaultOrientation: number,
+    scale: number,
+    monochromeThreshold: number,
+    allowedOrigins: string[],
 }
 
 export type LabelStock = {
@@ -24,6 +30,13 @@ type QuillSettingsContextType = {
     setDarkMode: (value: boolean) => void;
     setSelectedPrinter: (value: string) => void;
     selectedPrinter: PrinterInfo | undefined;
+    setDensity: (value: number) => void;
+    setPrintIps: (value: number) => void;
+    setDefaultOrientation: (value: number) => void;
+    setScale: (value: number) => void;
+    setMonochromeThreshold: (value: number) => void;
+    setListenPort: (value: number) => void;
+    setAllowedOrigins: (value: string[]) => void;
     createLabel: (value: LabelStock) => void;
     editLabel: (value: LabelStock) => void;
     deleteLabel: (id: string) => void;
@@ -89,6 +102,40 @@ export function QuillSettingsProvider({children}: { children: ReactNode })
         } as QuillSettings));
     };
 
+    const setDensity = (value: number): void =>
+    {
+        setQuillSettings(prev => ({...prev, density: value} as QuillSettings));
+    };
+
+    const setPrintIps = (value: number): void =>
+    {
+        setQuillSettings(prev => ({...prev, printIps: value} as QuillSettings));
+    };
+
+    const setDefaultOrientation = (value: number): void =>
+    {
+        setQuillSettings(prev => ({...prev, defaultOrientation: value} as QuillSettings));
+    };
+
+    const setScale = (value: number): void =>
+    {
+        setQuillSettings(prev => ({...prev, scale: value} as QuillSettings));
+    };
+
+    const setMonochromeThreshold = (value: number): void =>
+    {
+        setQuillSettings(prev => ({...prev, monochromeThreshold: value} as QuillSettings));
+    };
+
+    const setAllowedOrigins = (value: string[]): void =>
+    {
+        setQuillSettings(prev => ({...prev, allowedOrigins: value} as QuillSettings));
+    };
+    const setListenPort = (value: number): void =>
+    {
+        setQuillSettings(prev => ({...prev, helperServicePort: value} as QuillSettings));
+    };
+
     const createLabel = (value: LabelStock) =>
     {
         invoke("create_label", {name: value.name, width: value.width, height: value.height, gap: value.gap, linerL: value.linerL, linerR: value.linerR}).then(() => load());
@@ -120,7 +167,7 @@ export function QuillSettingsProvider({children}: { children: ReactNode })
     };
 
     return (
-        <QuillSettingsContext.Provider value={{settings: quillSettings ?? {} as QuillSettings, setDarkMode, setSelectedPrinter, selectedPrinter, createLabel, editLabel, deleteLabel}}>
+        <QuillSettingsContext.Provider value={{settings: quillSettings ?? {} as QuillSettings, setDarkMode, setSelectedPrinter, selectedPrinter, setDensity, setPrintIps, setDefaultOrientation, setScale, setMonochromeThreshold, setAllowedOrigins, createLabel, editLabel, deleteLabel, setListenPort}}>
             {children}
         </QuillSettingsContext.Provider>
     );
