@@ -125,6 +125,7 @@ select:focus-visible {
     --color-surface-alt: #f0efec;
     --color-topbar: #ffffff;
     --color-sidebar: #faf9f7;
+    --color-selected-printer: #fbe4dd;
     --color-hover: #f0efec;
     --color-success-soft: #e3f4e9;
     --color-success-soft-foreground: #16a34a;
@@ -171,6 +172,8 @@ select:focus-visible {
     --text-2xl: 19px;
     --text-3xl: 20px;
     --text-display: 30px;
+    --color-important-fg: #b45309;
+    --color-important-bg: rgba(217, 119, 6, 0.1);
 }
 
 .dark {
@@ -185,6 +188,7 @@ select:focus-visible {
     --color-success-soft: #152a1f;
     --color-success-soft-foreground: #16a34a;
     --color-accent-sidebar: #2d1611;
+    --color-selected-printer: #37201c;
 
     /* ---- Borders ---- */
     --color-border: rgba(255, 255, 255, 0.07);
@@ -201,4 +205,26 @@ select:focus-visible {
 
     /* ---- Card shadow ---- */
     --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+
+@layer components {
+    .radio__control {
+        @apply border-2 border-border-strong w-5 h-5 rounded-full bg-transparent;
+    }
+
+    [data-selected] .radio__indicator {
+        @apply relative w-5 h-4 rounded-full bg-selected-printer;
+    }
+
+    [data-selected] .radio__indicator::before {
+        @apply relative w-3 h-3 rounded-full bg-accent! scale-75!;
+    }
+
+    .button--lg {
+        @apply rounded-full px-4.5 h-10.5 inline-flex items-center gap-2 text-white text-base font-bold grow-0 shrink-0 basis-auto;
+        @apply hover:scale-105 transition duration-200;
+        background: var(--accent-grad);
+        box-shadow: rgba(0, 0, 0, 0.3) 0 2px 12px
+    }
 }

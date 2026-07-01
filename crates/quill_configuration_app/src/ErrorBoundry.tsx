@@ -1,6 +1,6 @@
 import React, {Component, ReactNode} from "react";
 import {Button} from "@heroui/react";
-import {Icon} from "@iconify/react";
+import {Icon} from "@iconify-icon/react";
 
 interface ErrorBoundaryState
 {
@@ -42,10 +42,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                     <Button
                         onPress={() => this.setState({hasError: false})}
                         className={"font-minecraft-body"}
-                        radius={"none"}
-                        startContent={<Icon className={"text-xl"} icon={"tabler:reload"}/>}
-                        color={"primary"}
                     >
+                        <Icon className={"text-xl"} icon={"tabler:reload"}/>
                         Try again
                     </Button>
                 </div>

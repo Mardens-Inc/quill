@@ -1,8 +1,10 @@
 import iconLight from "../../../../res/icons/quill-dark.svg";
 import {openUrl} from "@tauri-apps/plugin-opener";
+import {useAbout} from "../providers/AboutProvider.tsx";
 
 export function AboutPage()
 {
+    const {version, buildNumber, configSchemaVersion, helperRunning, helperVersion} = useAbout();
     return (
         <div className={"flex justify-center w-full"}>
             <div className={"flex flex-col gap-2 mx-8 mt-5 w-full max-w-4xl"}>
@@ -18,22 +20,28 @@ export function AboutPage()
                 <div className={"flex flex-col bg-surface rounded-2xl shadow-sm border"}>
                     <div className={"flex flex-row justify-between border-b px-5.5 py-3.75 items-center"}>
                         <p className={"text-md-plus text-fg-muted"}>App version</p>
-                        <p className={"text-md-plus text-fg font-mono font-semibold"}>2.4.1</p>
+                        <p className={"text-md-plus text-fg font-mono font-semibold"}>{version} - build {buildNumber}</p>
                     </div>
                     <div className={"flex flex-row justify-between border-b px-5.5 py-3.75 items-center"}>
                         <p className={"text-md-plus text-fg-muted"}>Helper service</p>
-                        <p className={"text-md-plus text-fg font-mono font-semibold"}>2.4.1 - build 1180</p>
+                        <p className={"text-md-plus text-fg font-mono font-semibold"}> {(helperVersion.version && helperVersion.build) ? <>{helperVersion.version} - build {helperVersion.build}</> : "N/A"} </p>
                     </div>
                     <div className={"flex flex-row justify-between border-b px-5.5 py-3.75 items-center"}>
                         <p className={"text-md-plus text-fg-muted"}>Config schema</p>
-                        <p className={"text-md-plus text-fg font-mono font-semibold"}>v7</p>
+                        <p className={"text-md-plus text-fg font-mono font-semibold"}>v{configSchemaVersion}</p>
                     </div>
                     <div className={"flex flex-row justify-between border-b px-5.5 py-3.75 items-center"}>
                         <p className={"text-md-plus text-fg-muted"}>Helper status</p>
                         <p className={"text-md-plus text-fg font-mono font-semibold"}>
-                            <div className={"flex flex-row items-center justify-center rounded-full px-2 py-1 bg-success-soft text-success-soft-foreground font-bold text-sm-plus"}>
-                                <span className={"w-1.5 h-1.5 bg-success rounded-full mx-1"}/>Running
-                            </div>
+                            {helperRunning ?
+                                <div className={"flex flex-row items-center justify-center rounded-full px-2 py-1 bg-success-soft text-success-soft-foreground font-bold text-sm-plus"}>
+                                    <span className={"w-1.5 h-1.5 bg-success rounded-full mx-1"}/>Running
+                                </div>
+                                :
+                                <div className={"flex flex-row items-center justify-center rounded-full px-2 py-1 bg-danger-soft text-danger-soft-foreground font-bold text-sm-plus"}>
+                                    <span className={"w-1.5 h-1.5 bg-danger rounded-full mx-1"}/>Offline
+                                </div>
+                            }
                         </p>
                     </div>
                 </div>

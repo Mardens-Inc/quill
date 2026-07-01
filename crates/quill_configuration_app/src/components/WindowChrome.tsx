@@ -1,20 +1,29 @@
 import {Button, ButtonGroup} from "@heroui/react";
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import {Icon} from "@iconify-icon/react";
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 import {useQuillSettings} from "../providers/QuillSettingsProvider.tsx";
 import iconLight from "../../../../res/icons/quill-light.svg";
 import iconDark from "../../../../res/icons/quill-dark.svg";
+import {PrinterInfo, useQuillPrinters} from "../providers/QuillPrintersProvider.tsx";
+import {useAbout} from "../providers/AboutProvider.tsx";
 
 export default function WindowChrome()
 {
     const appWindow = getCurrentWindow();
+    const {helperRunning} = useAbout();
     const {settings, setDarkMode} = useQuillSettings();
+    const {printers} = useQuillPrinters();
+    const [selectedPrinter, setSelectedPrinter] = useState<PrinterInfo | undefined>(undefined);
 
     useEffect(() =>
     {
         appWindow.setDecorations(false).then();
     }, []);
+    useEffect(() =>
+    {
+        setSelectedPrinter(printers.find(i => i.printer_name == settings.selectedPrinter));
+    }, [printers]);
     return (
 
         <div className={"flex flex-row h-12 backdrop-blur-sm sticky top-0 w-full z-51 backdrop-saturate-150 select-none bg-topbar text-ink-0 border-b"}>
@@ -26,14 +35,20 @@ export default function WindowChrome()
                 }
                 <p className={"text-lg font-bold select-none uppercase"}>Quill</p>
                 <div className={"flex flex-row ml-16 items-center gap-2"}>
-                    <div className={"flex flex-row items-center justify-center rounded-full px-2 py-1 bg-success-soft text-success-soft-foreground font-bold text-sm-plus"}>
-                        <span className={"w-1.5 h-1.5 bg-success rounded-full mx-1"}/>Helper Running
-                    </div>
+                    {helperRunning ?
+                        <div className={"flex flex-row items-center justify-center rounded-full px-2 py-1 bg-success-soft text-success-soft-foreground font-bold text-sm-plus"}>
+                            <span className={"w-1.5 h-1.5 bg-success rounded-full mx-1"}/>Helper Running
+                        </div>
+                        : <div className={"flex flex-row items-center justify-center rounded-full px-2 py-1 bg-danger-soft text-danger-soft-foreground font-bold text-sm-plus"}>
+                            <span className={"w-1.5 h-1.5 bg-danger rounded-full mx-1"}/>Helper Offline
+                        </div>
+                    }
                     <div className={"flex flex-row items-center justify-center rounded-full px-2 py-1 bg-slate-200 dark:bg-surface-2 text-ink-2 font-semibold text-sm-plus"}>
-                        <span className={"w-1.5 h-1.5 bg-ink-2 rounded-full mx-1"}/>No Printer
+                        <span className={"w-1.5 h-1.5 bg-ink-2 rounded-full mx-1"}/> {selectedPrinter?.status ?? "Unknown"}
                     </div>
-                    <div className={"flex flex-row items-center justify-center rounded-full px-2 py-1 bg-transparent border font-mono text-ink-2 font-normal text-sm-plus"}>
-                        <Icon icon={"lucide:printer"} className={"mx-1"}/>No printer selected
+                    <div className={"flex flex-row items-center justify-center rounded-full px-2 py-1 bg-transparent border font-mono text-ink-2 font-normal text-sm-plus "}>
+                        <Icon icon={"lucide:printer"} className={"mx-1"}/>
+                        <span className={"max-w-37.5 truncate"}>{settings.selectedPrinter ? settings.selectedPrinter : "No printer selected"}</span>
                     </div>
                 </div>
             </div>

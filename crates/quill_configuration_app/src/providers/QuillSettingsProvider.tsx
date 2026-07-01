@@ -1,21 +1,38 @@
 import {createContext, ReactNode, useCallback, useContext, useEffect, useState} from "react";
 import {invoke} from "@tauri-apps/api/core";
+import {PrinterInfo, useQuillPrinters} from "./QuillPrintersProvider.tsx";
 
 type QuillSettings = {
     darkMode: boolean,
+    selectedPrinter: string | undefined,
+    labels: LabelStock[],
+    helperServicePort: number,
+}
+
+type LabelStock = {
+    id: string,
+    name: string,
+    width: number,
+    height: number,
+    gap: number,
+    liner_l: number,
+    liner_r: number,
 }
 
 type QuillSettingsContextType = {
     settings: QuillSettings;
     setDarkMode: (value: boolean) => void;
+    setSelectedPrinter: (value: string) => void;
+    selectedPrinter: PrinterInfo | undefined;
 }
 
 const QuillSettingsContext = createContext<QuillSettingsContextType | undefined>(undefined);
 
 export function QuillSettingsProvider({children}: { children: ReactNode })
 {
-
-    const [quillSettings, setQuillSettings] = useState<QuillSettings>({} as QuillSettings);
+    const [quillSettings, setQuillSettings] = useState<QuillSettings | undefined>(undefined);
+    const {printers} = useQuillPrinters();
+    const selectedPrinter = printers.find(i => i.printer_name == quillSettings?.selectedPrinter);
     useEffect(() =>
     {
         invoke("load").then(value =>
@@ -27,6 +44,7 @@ export function QuillSettingsProvider({children}: { children: ReactNode })
 
     useEffect(() =>
     {
+        if (quillSettings == undefined) return;
         if (quillSettings.darkMode) document.documentElement.classList.add("dark");
         else document.documentElement.classList.remove("dark");
         save();
@@ -50,13 +68,21 @@ export function QuillSettingsProvider({children}: { children: ReactNode })
         setQuillSettings(prev => ({
             ...prev,
             darkMode: value
-        }));
+        } as QuillSettings));
         if (value) document.documentElement.classList.add("dark");
         else document.documentElement.classList.remove("dark");
     };
 
+    const setSelectedPrinter = (value: string): void =>
+    {
+        setQuillSettings(prev => ({
+            ...prev,
+            selectedPrinter: value
+        } as QuillSettings));
+    };
+
     return (
-        <QuillSettingsContext.Provider value={{settings: quillSettings, setDarkMode}}>
+        <QuillSettingsContext.Provider value={{settings: quillSettings ?? {} as QuillSettings, setDarkMode, setSelectedPrinter, selectedPrinter}}>
             {children}
         </QuillSettingsContext.Provider>
     );
