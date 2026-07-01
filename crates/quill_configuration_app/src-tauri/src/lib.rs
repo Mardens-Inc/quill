@@ -1,8 +1,14 @@
 use tracing::{debug, error, info, trace, warn};
+use crate::about::about;
+use crate::printers::list_printers;
 
+mod logging;
 mod settings;
-mod util;
-use settings::commands::{load, save};
+mod printers;
+mod about;
+mod helper_service;
+
+use crate::settings::{load, save, create_label};
 
 pub static DEBUG: bool = cfg!(debug_assertions);
 
@@ -26,7 +32,7 @@ fn log(level: String, message: String, location: Option<String>) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    if let Err(e) = util::logging::setup_logging() {
+    if let Err(e) = logging::setup_logging() {
         eprintln!("failed to initialise logging: {e}");
     }
     if let Err(e) = color_eyre::install() {
@@ -41,7 +47,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![log, load, save])
+        .invoke_handler(tauri::generate_handler![log, load, save, list_printers, about, create_label])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
