@@ -17,6 +17,7 @@ import {AboutPage} from "./pages/AboutPage.tsx";
 import {QuillPrintersProvider} from "./providers/QuillPrintersProvider.tsx";
 import {ErrorBoundary} from "./ErrorBoundry.tsx";
 import {AboutProvider} from "./providers/AboutProvider.tsx";
+import {LabelStockModalProvider} from "./components/label_stocks/LabelStockModal.tsx";
 
 // Route all console output and uncaught errors through the Rust tracing
 // pipeline so frontend logs land in the same rolling log files as native logs.
@@ -53,7 +54,7 @@ export function MainContentRenderer()
                                 <Routes>
                                     <Route>
                                         <Route path="/" element={<PrinterSetupPage/>}/>
-                                        <Route path="/stocks" element={<LabelStocksPage/>}/>
+                                        <Route path="/stocks" element={<LabelStockModalProvider><LabelStocksPage/></LabelStockModalProvider>}/>
                                         <Route path="/print-settings" element={<PrintSettingsPage/>}/>
                                         <Route path="/security" element={<ServerSecurityPage/>}/>
                                         <Route path="/logs" element={<LogsPage/>}/>

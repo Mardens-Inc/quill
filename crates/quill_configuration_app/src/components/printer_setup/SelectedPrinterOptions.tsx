@@ -65,7 +65,7 @@ export function SelectedPrinterOptions()
                     </div>
                 </div>
                 <Separator />
-                <Button size={"lg"}>
+                <Button size={"lg"} className={"primary"}>
                     <Icon icon={"solar:play-bold"} />
                     Test print
                 </Button>
