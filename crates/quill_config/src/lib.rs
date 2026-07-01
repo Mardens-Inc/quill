@@ -10,8 +10,36 @@ use winreg::{RegKey, enums::HKEY_CURRENT_USER};
 pub struct QuillSettings {
     pub dark_mode: bool,
     pub selected_printer: Option<String>,
+    /// The loopback port that the http server is running on.
+    /// This is the server that actually will handle the print jobs
+    /// and be reachable by the web browser.
     pub helper_service_port: u16,
     pub labels: Vec<LabelStock>,
+    /// Higher values burn darker.
+    /// Too high smears on synthetic stock; too low fades on thermal paper.
+    /// Most stock prints clean at 8–10.
+    /// A value between 0 and 15
+    pub density: u8,
+    /// Slower speeds give crisper barcodes.
+    /// Drop to 2–4 ips if scanners struggle to read printed codes.
+    /// The printers' iterations per second, a value between 2 and 8
+    pub print_ips: u8,
+    /// The rotation applied before printing.
+    /// Most product tags are in portrait.
+    /// 0 = portrait, 1 = landscape
+    pub default_orientation: u8,
+    /// Scales label content. Keep at 100% unless artwork is consistently over- or undersized.
+    /// Value between 50 and 150
+    pub scale: u8,
+    /// Pixels darker than this become black;
+    /// lighter become white when converting color artwork for thermal printing.
+    /// Raise it to keep faint detail, lower it to drop background noise.
+    /// Value between 0 and 255
+    pub monochrome_threshold: u8,
+    /// To restrict access to this software.
+    /// This will ensure that only addresses with the specified origin will be allowed.
+    /// This will allow wildcards, ex: https://*.mardens.com
+    pub allowed_origins: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -40,6 +68,15 @@ impl QuillSettings {
             .get_value::<u64, _>("helperServicePort")
             .unwrap_or(51820) as u16;
 
+        let density = key.get_value::<u64, _>("density").unwrap_or(8) as u8;
+        let print_ips = key.get_value::<u64, _>("printIPS").unwrap_or(4) as u8;
+        let default_orientation = key.get_value::<u64, _>("defaultOrientation").unwrap_or(0) as u8;
+        let scale = key.get_value::<u64, _>("scale").unwrap_or(100) as u8;
+        let monochrome_threshold = key
+            .get_value::<u64, _>("monochromeThreshold")
+            .unwrap_or(128) as u8;
+        let allowed_origins: Vec<String> = key.get_value("allowedOrigins").unwrap_or_default();
+
         let mut labels: Vec<LabelStock> = Vec::new();
         let (stocks_key, _disp) = key.create_subkey("stocks")?;
         for subkey in stocks_key.enum_keys() {
@@ -67,6 +104,12 @@ impl QuillSettings {
             selected_printer,
             helper_service_port,
             labels,
+            density,
+            print_ips,
+            default_orientation,
+            scale,
+            monochrome_threshold,
+            allowed_origins,
         })
     }
     pub fn save(&self) -> Result<()> {
@@ -81,6 +124,31 @@ impl QuillSettings {
             error!("Failed to save helper service port: {}", e);
             return Err(e.into());
         }
+        if let Err(e) = key.set_value("allowedOrigins", &self.allowed_origins) {
+            error!("Failed to save allowed origins array: {}", e);
+            return Err(e.into());
+        }
+        if let Err(e) = key.set_value("density", &(self.density as u64)) {
+            error!("Failed to save density: {}", e);
+            return Err(e.into());
+        }
+        if let Err(e) = key.set_value("printIPS", &(self.print_ips as u64)) {
+            error!("Failed to save the print ips: {}", e);
+            return Err(e.into());
+        }
+        if let Err(e) = key.set_value("monochromeThreshold", &(self.monochrome_threshold as u64)) {
+            error!("Failed to save the monochrome threshold: {}", e);
+            return Err(e.into());
+        }
+        if let Err(e) = key.set_value("defaultOrientation", &(self.default_orientation as u64)) {
+            error!("Failed to save the default orientation: {}", e);
+            return Err(e.into());
+        }
+        if let Err(e) = key.set_value("scale", &(self.scale as u64)) {
+            error!("Failed to save scale: {}", e);
+            return Err(e.into());
+        }
+
         if let Some(selected_printer) = &self.selected_printer
             && let Err(e) = key.set_value("selectedPrinter", selected_printer)
         {
@@ -91,7 +159,7 @@ impl QuillSettings {
 
         for stock in stocks.enum_keys() {
             let stock = stock?;
-            if self.labels.iter().find(|l|l.id == stock).is_none() {
+            if self.labels.iter().find(|l| l.id == stock).is_none() {
                 stocks.delete_subkey(&stock)?;
             }
         }
