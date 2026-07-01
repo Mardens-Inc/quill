@@ -4,7 +4,9 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use chrono::{Local, Timelike};
+use serde::{Deserialize, Serialize};
 use tar::Builder;
+use tracing::{debug, error, info, trace, warn};
 use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::fmt::MakeWriter;
 use tracing_subscriber::{Layer, fmt, prelude::*};
@@ -244,4 +246,77 @@ fn archive(dir: &Path) -> io::Result<()> {
 
     builder.into_inner()?.finish()?;
     Ok(())
+}
+/// Bridge for webview-side logging.
+///
+/// The frontend logger (see `src/util/logger.ts`) invokes this command so that
+/// `console.*` / `log.*` calls in React are re-emitted as `tracing` events
+/// under the `frontend` target and land in the same rolling log files as the
+/// Rust-side logs.
+#[tauri::command]
+pub fn log(level: String, message: String, location: Option<String>) {
+    match level.as_str() {
+        "trace" => trace!(target: "frontend", location = ?location, "{message}"),
+        "debug" => debug!(target: "frontend", location = ?location, "{message}"),
+        "info" => info!(target: "frontend", location = ?location, "{message}"),
+        "warn" => warn!(target: "frontend", location = ?location, "{message}"),
+        "error" => error!(target: "frontend", location = ?location, "{message}"),
+        _ => info!(target: "frontend", location = ?location, "{message}"),
+    }
+}
+
+/// One structured log record, mirroring a line of `logs.ndjson` as emitted by
+/// the `tracing` JSON layer (see [`setup_logging`]).
+#[derive(Serialize, Deserialize)]
+pub struct LogItem {
+    /// RFC 3339 / ISO 8601 UTC timestamp, e.g. `2026-07-01T19:57:32.355907Z`.
+    pub timestamp: String,
+    /// Log level as emitted by `tracing`: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`.
+    pub level: String,
+    /// The event's structured fields; always carries `message`.
+    pub fields: LogFields,
+    /// Emitting module path, e.g. `hyper_util::client::legacy::connect::http`.
+    pub target: String,
+    /// Name of the thread that produced the event (absent for unnamed threads).
+    #[serde(rename = "threadName", skip_serializing_if = "Option::is_none")]
+    pub thread_name: Option<String>,
+}
+
+/// The `fields` object of a [`LogItem`]. Only `message` is extracted; any extra
+/// keys the `log` bridge attaches (`log.target`, `log.file`, `log.line`, …) are
+/// ignored on deserialize.
+#[derive(Serialize, Deserialize)]
+pub struct LogFields {
+    #[serde(default)]
+    pub message: String,
+}
+
+/// Absolute path to the `logs/` directory (next to the executable) as a string,
+/// for display and for the frontend's "Open folder" action.
+#[tauri::command]
+pub fn logs_directory() -> Result<String, String> {
+    logs_dir()
+        .map(|dir| dir.to_string_lossy().into_owned())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_logs() -> Result<Vec<LogItem>, String> {
+    let path = logs_dir()
+        .map_err(|e| e.to_string())?
+        .join(LOG_FILES[target::JSON]);
+
+    let contents = match fs::read_to_string(&path) {
+        Ok(contents) => contents,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(e.to_string()),
+    };
+
+    let items = contents
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .filter_map(|line| serde_json::from_str::<LogItem>(line).ok())
+        .collect();
+
+    Ok(items)
 }
