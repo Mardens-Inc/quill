@@ -1,0 +1,43 @@
+[package]
+name = "quill_server"
+version = "0.0.0"
+edition = "2024"
+authors = ["Drew Chase"]
+rust-version = "1.90.0"
+
+[[bin]]
+name = "quill_server"
+path = "src/main.rs"
+
+[lib]
+name = "quill_server_lib"
+path = "src/lib.rs"
+crate-type = ["lib"]
+
+[dependencies]
+actix-web = { version = ">=4.9.0" }
+serde_json = { version = ">=1.0.125" }
+walkdir = ">=2.5.0"
+thiserror = ">=2.0.11"
+
+tracing = { version = "0.1.44", features = ["max_level_trace"] }
+tracing-subscriber = { version = "0.3.19", features = ["json", "env-filter"] }
+color-eyre = { version = "0.6.5", features = ["tracing-error", "track-caller"] }
+
+chrono = { version = "0.4.45" }
+tar = "0.4.43"
+xz2 = "0.1.7"
+
+quill_config = { path = "../quill_config" }
+clap = { version = "4.6.1", features = ["unicode", "color", "error-context", "help", "string", "suggestions", "usage", "wrap_help"] }
+
+[build-dependencies]
+walkdir = "2.5.0"
+chrono = { version = "0.4.45" }
+
+
+[profile.release]
+lto = true
+panic = "abort"
+opt-level = "z"
+codegen-units = 1
