@@ -44,7 +44,7 @@ impl QuillSettings {
         let (stocks_key, _disp) = key.create_subkey("stocks")?;
         for subkey in stocks_key.enum_keys() {
             let subkey = subkey?;
-            let (label_key, _disp) = key.create_subkey(&subkey)?;
+            let (label_key, _disp) = stocks_key.create_subkey(&subkey)?;
             let name = label_key.get_value::<String, _>("name")?;
             let width = (label_key.get_value::<u64, _>("width")? as f32) / 100f32;
             let height = (label_key.get_value::<u64, _>("height")? as f32) / 100f32;
@@ -88,6 +88,13 @@ impl QuillSettings {
         }
 
         let (stocks, _disp) = key.create_subkey("stocks")?;
+
+        for stock in stocks.enum_keys() {
+            let stock = stock?;
+            if self.labels.iter().find(|l|l.id == stock).is_none() {
+                stocks.delete_subkey(&stock)?;
+            }
+        }
 
         for label in &self.labels {
             let (label_key, _disp) = stocks.create_subkey(&label.id)?;

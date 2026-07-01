@@ -21,10 +21,10 @@ pub fn create_label(
     width: f32,
     height: f32,
     gap: f32,
-    label_l: f32,
-    label_r: f32,
+    liner_l: f32,
+    liner_r: f32,
 ) -> Result<(), String> {
-    let label = LabelStock::new(name, width, height, gap, label_l, label_r);
+    let label = LabelStock::new(name, width, height, gap, liner_l, liner_r);
     let mut settings =
         QuillSettings::load().map_err(|e| format!("Failed to load settings: {}", e))?;
     settings.labels.push(label);
