@@ -1,0 +1,12 @@
+[package]
+name = "quill_config"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90.0"
+
+[dependencies]
+color-eyre = "0.6.5"
+serde = { version = "1.0.228", features = ["derive"] }
+tracing = "0.1.44"
+winreg = "0.56.0"
+uuid = {version = "1.23.4", features = ["v4"]}
