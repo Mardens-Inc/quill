@@ -2,9 +2,11 @@
 name = "quill_lib"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.90.0"
 
 [dependencies]
 windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Storage_Xps", "Win32_Graphics_Printing", "Win32_Graphics_Gdi", "Win32_Security"] }
 thiserror = { version = "2.0.18" }
 image = { version = "0.25.10", features = ["png", "jpeg"] }
 tracing = { workspace = true }
+serde = { version = "1.0.228", features = ["derive"] }

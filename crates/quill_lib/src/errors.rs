@@ -10,4 +10,6 @@ pub enum QuillError {
     PrinterNotOpenedError,
     #[error(transparent)]
     WindowsError(#[from] windows::core::Error),
+    #[error("Unsupported operation: {0}")]
+    UnsupportedOperation(String),
 }

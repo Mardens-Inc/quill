@@ -66,7 +66,7 @@ impl Printers {
         let mut out = Vec::with_capacity(returned as usize);
         for i in 0..returned as usize {
             let r = unsafe { &*head.add(i) };
-            out.push(PrinterInfo {
+            let mut info = PrinterInfo {
                 server_name: crate::pstr_opt(r.pServerName),
                 printer_name: crate::pstr_req(r.pPrinterName),
                 share_name: crate::pstr_opt(r.pShareName),
@@ -86,7 +86,10 @@ impl Printers {
                 status: r.Status.into(),
                 jobs: r.cJobs,
                 average_ppm: r.AveragePPM,
-            });
+                dpi: None,
+            };
+            info.dpi = info.get_dpi().ok();
+            out.push(info);
         }
         info!("Enumerated {} local printer(s)", out.len());
         debug!(

@@ -7,7 +7,7 @@ pub mod errors;
 pub mod image_processing;
 pub mod print_orientation;
 pub mod printer_handle;
-mod printer_info;
+pub mod printer_info;
 pub mod printer_status;
 pub mod printers;
 pub mod stock;
