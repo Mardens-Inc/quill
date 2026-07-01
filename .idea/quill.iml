@@ -8,6 +8,8 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/quill_server/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/quill_service/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/quill_configuration_app/src-tauri/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/quill_config/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/crates/quill_server/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

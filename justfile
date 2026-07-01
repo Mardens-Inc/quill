@@ -25,7 +25,7 @@ clean: _clean_node
 _dist:
     @if (Test-Path ./dist){Remove-Item ./dist -Recurse -Force}
     @mkdir dist
-    @cp ./release/quill_configuration_app.exe, ./release/quill_server.exe, ./release/quill_service.exe, ./release/bundle/nsis/*, ./release/bundle/msi/* ./dist
+    @cp ./release/quill_configuration_app.exe, ./release/quill_server.exe, ./release/quill_server.exe, ./release/bundle/nsis/*, ./release/bundle/msi/* ./dist
 
 [windows]
 [working-directory("./crates/quill_configuration_app")]
