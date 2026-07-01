@@ -9,14 +9,14 @@ type QuillSettings = {
     helperServicePort: number,
 }
 
-type LabelStock = {
-    id: string,
+export type LabelStock = {
+    id?: string,
     name: string,
     width: number,
     height: number,
     gap: number,
-    liner_l: number,
-    liner_r: number,
+    linerL: number,
+    linerR: number,
 }
 
 type QuillSettingsContextType = {
@@ -24,6 +24,9 @@ type QuillSettingsContextType = {
     setDarkMode: (value: boolean) => void;
     setSelectedPrinter: (value: string) => void;
     selectedPrinter: PrinterInfo | undefined;
+    createLabel: (value: LabelStock) => void;
+    editLabel: (value: LabelStock) => void;
+    deleteLabel: (id: string) => void;
 }
 
 const QuillSettingsContext = createContext<QuillSettingsContextType | undefined>(undefined);
@@ -35,11 +38,7 @@ export function QuillSettingsProvider({children}: { children: ReactNode })
     const selectedPrinter = printers.find(i => i.printer_name == quillSettings?.selectedPrinter);
     useEffect(() =>
     {
-        invoke("load").then(value =>
-        {
-            console.log("Loaded settings", value);
-            setQuillSettings(value as QuillSettings);
-        });
+        load();
     }, []);
 
     useEffect(() =>
@@ -49,6 +48,15 @@ export function QuillSettingsProvider({children}: { children: ReactNode })
         else document.documentElement.classList.remove("dark");
         save();
     }, [quillSettings]);
+
+    const load = () =>
+    {
+        invoke("load").then(value =>
+        {
+            console.log("Loaded settings", value);
+            setQuillSettings(value as QuillSettings);
+        });
+    };
 
     const save = useCallback(() =>
     {
@@ -81,8 +89,38 @@ export function QuillSettingsProvider({children}: { children: ReactNode })
         } as QuillSettings));
     };
 
+    const createLabel = (value: LabelStock) =>
+    {
+        invoke("create_label", {name: value.name, width: value.width, height: value.height, gap: value.gap, linerL: value.linerL, linerR: value.linerR}).then(() => load());
+    };
+    const deleteLabel = (id: string): void =>
+    {
+        setQuillSettings(prev => (
+            {
+                ...prev,
+                labels: prev?.labels.filter(i => i.id !== id)
+            } as QuillSettings
+        ));
+    };
+    const editLabel = (value: LabelStock) =>
+    {
+        setQuillSettings(prev => (
+            {
+                ...prev,
+                labels: prev?.labels.map(i =>
+                {
+                    if (i.id === value.id)
+                    {
+                        return value;
+                    }
+                    return i;
+                })
+            } as QuillSettings
+        ));
+    };
+
     return (
-        <QuillSettingsContext.Provider value={{settings: quillSettings ?? {} as QuillSettings, setDarkMode, setSelectedPrinter, selectedPrinter}}>
+        <QuillSettingsContext.Provider value={{settings: quillSettings ?? {} as QuillSettings, setDarkMode, setSelectedPrinter, selectedPrinter, createLabel, editLabel, deleteLabel}}>
             {children}
         </QuillSettingsContext.Provider>
     );
