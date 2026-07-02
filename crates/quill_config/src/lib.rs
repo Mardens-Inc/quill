@@ -1,12 +1,13 @@
-use quill_lib::stock::Stock;
 use color_eyre::Result;
+use quill_lib::printers::Printers;
+use quill_lib::stock::Stock;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
 use uuid::Uuid;
 use winreg::{RegKey, enums::HKEY_CURRENT_USER};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuillSettings {
     pub dark_mode: bool,
@@ -65,7 +66,13 @@ impl QuillSettings {
             .get_value::<String, _>("darkMode")
             .unwrap_or("false".to_string())
             == "true";
-        let selected_printer = key.get_value::<String, _>("selectedPrinter").ok();
+        let selected_printer = match key.get_value::<String, _>("selectedPrinter") {
+            Ok(s) => Some(s),
+            Err(_) => Printers::get_available_printers()?
+                .iter()
+                .find(|i| i.printer_name.to_lowercase().contains("tsc"))
+                .map(|default_printer| default_printer.printer_name.clone()),
+        };
         let helper_service_port = key
             .get_value::<u64, _>("helperServicePort")
             .unwrap_or(51820) as u16;
@@ -77,8 +84,11 @@ impl QuillSettings {
         let monochrome_threshold = key
             .get_value::<u64, _>("monochromeThreshold")
             .unwrap_or(128) as u8;
-        let allowed_origins: Vec<String> = key.get_value("allowedOrigins").unwrap_or_default();
-        let install_dir: PathBuf = PathBuf::from(key.get_value::<String, _>("installDir").unwrap_or_default());
+        let allowed_origins: Vec<String> = key
+            .get_value("allowedOrigins")
+            .unwrap_or(vec!["https://pricetagger.mardens.com".to_string()]);
+        let install_dir: PathBuf =
+            PathBuf::from(key.get_value::<String, _>("installDir").unwrap_or_default());
 
         let mut labels: Vec<LabelStock> = Vec::new();
         let (stocks_key, _disp) = key.create_subkey("stocks")?;
@@ -113,7 +123,7 @@ impl QuillSettings {
             scale,
             monochrome_threshold,
             allowed_origins,
-            install_dir
+            install_dir,
         })
     }
     pub fn save(&self) -> Result<()> {
@@ -152,7 +162,10 @@ impl QuillSettings {
             error!("Failed to save scale: {}", e);
             return Err(e.into());
         }
-        if let Err(e) = key.set_value("installDir", &self.install_dir.to_string_lossy().to_string()) {
+        if let Err(e) = key.set_value(
+            "installDir",
+            &self.install_dir.to_string_lossy().to_string(),
+        ) {
             error!("Failed to save install directory: {}", e);
             return Err(e.into());
         }
@@ -221,6 +234,8 @@ impl From<LabelStock> for Stock {
 }
 impl From<&LabelStock> for Stock {
     fn from(val: &LabelStock) -> Self {
-        Stock::inches(val.width, val.height).with_gap(val.gap).with_exposed_liner(val.liner_l, val.liner_r)
+        Stock::inches(val.width, val.height)
+            .with_gap(val.gap)
+            .with_exposed_liner(val.liner_l, val.liner_r)
     }
 }
