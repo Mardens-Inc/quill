@@ -1,0 +1,25 @@
+info:
+  name: Create Print Job
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url}}/printers/print?stock_id=3834d70a-3364-444f-9358-f905d5916433"
+  params:
+    - name: stock_id
+      value: 3834d70a-3364-444f-9358-f905d5916433
+      type: query
+  body:
+    type: file
+    data:
+      - filePath: ..\crates\quill_lib\examples\tag.png
+        contentType: image/png
+        selected: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
