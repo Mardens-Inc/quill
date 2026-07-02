@@ -10,3 +10,4 @@ serde = { version = "1.0.228", features = ["derive"] }
 tracing = "0.1.44"
 winreg = "0.56.0"
 uuid = {version = "1.23.4", features = ["v4"]}
+quill_lib = {path="../quill_lib"}

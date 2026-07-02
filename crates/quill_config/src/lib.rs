@@ -1,3 +1,4 @@
+use quill_lib::stock::Stock;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -40,6 +41,7 @@ pub struct QuillSettings {
     /// This will ensure that only addresses with the specified origin will be allowed.
     /// This will allow wildcards, ex: https://*.mardens.com
     pub allowed_origins: Vec<String>,
+    pub install_dir: PathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -76,6 +78,7 @@ impl QuillSettings {
             .get_value::<u64, _>("monochromeThreshold")
             .unwrap_or(128) as u8;
         let allowed_origins: Vec<String> = key.get_value("allowedOrigins").unwrap_or_default();
+        let install_dir: PathBuf = PathBuf::from(key.get_value::<String, _>("installDir").unwrap_or_default());
 
         let mut labels: Vec<LabelStock> = Vec::new();
         let (stocks_key, _disp) = key.create_subkey("stocks")?;
@@ -110,6 +113,7 @@ impl QuillSettings {
             scale,
             monochrome_threshold,
             allowed_origins,
+            install_dir
         })
     }
     pub fn save(&self) -> Result<()> {
@@ -146,6 +150,10 @@ impl QuillSettings {
         }
         if let Err(e) = key.set_value("scale", &(self.scale as u64)) {
             error!("Failed to save scale: {}", e);
+            return Err(e.into());
+        }
+        if let Err(e) = key.set_value("installDir", &self.install_dir.to_string_lossy().to_string()) {
+            error!("Failed to save install directory: {}", e);
             return Err(e.into());
         }
 
@@ -203,5 +211,16 @@ impl LabelStock {
             liner_l: liner_l.into(),
             liner_r: liner_r.into(),
         }
+    }
+}
+
+impl From<LabelStock> for Stock {
+    fn from(val: LabelStock) -> Self {
+        Stock::from(&val)
+    }
+}
+impl From<&LabelStock> for Stock {
+    fn from(val: &LabelStock) -> Self {
+        Stock::inches(val.width, val.height).with_gap(val.gap).with_exposed_liner(val.liner_l, val.liner_r)
     }
 }
