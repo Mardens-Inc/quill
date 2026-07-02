@@ -4,14 +4,13 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 html, body {
-    @apply font-sans bg-app text-fg;
+    @apply font-sans bg-app text-fg overflow-hidden;
 }
 
 :root {
     --scrollbar-background-color: transparent;
     --scrollbar-thumb-color: var(--color-border-strong);
     --scrollbar-thumb-hover-color: var(--color-fg-subtle);
-    overflow: auto;
     scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-background-color);
     scrollbar-width: thin;
     user-select: none;
@@ -266,7 +265,7 @@ select:focus-visible {
     }
 
 
-    .input{
+    .input {
         @apply rounded-lg border border-input-border text-base h-10 px-3.25 bg-input text-fg font-mono text-md-plus;
     }
 

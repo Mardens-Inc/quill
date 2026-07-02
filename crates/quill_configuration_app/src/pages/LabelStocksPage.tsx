@@ -3,6 +3,7 @@ import {Icon} from "@iconify-icon/react";
 import {useQuillSettings} from "../providers/QuillSettingsProvider.tsx";
 import {LabelSilhouette, useLabelStockModal} from "../components/label_stocks/LabelStockModal.tsx";
 import {useState} from "react";
+import {testPrint} from "../printer.ts";
 
 function DeletePopover({onConfirm}: { onConfirm: () => void })
 {
@@ -83,6 +84,20 @@ export function LabelStocksPage()
                                                     </Button>
                                                 </Tooltip.Trigger>
                                                 <Tooltip.Content>Edit the label stock</Tooltip.Content>
+                                            </Tooltip>
+                                            <Tooltip closeDelay={0} delay={1000}>
+                                                <Tooltip.Trigger>
+                                                    <Button
+                                                        isIconOnly
+                                                        variant={"outline"}
+                                                        className={"mx-1 rounded-lg"}
+                                                        size={"sm"}
+                                                        onPress={() => testPrint(label)}
+                                                    >
+                                                        <Icon icon={"lucide:printer"}/>
+                                                    </Button>
+                                                </Tooltip.Trigger>
+                                                <Tooltip.Content>Start a test print</Tooltip.Content>
                                             </Tooltip>
                                             <Tooltip closeDelay={0} delay={1000}>
                                                 <Tooltip.Trigger>
