@@ -1,5 +1,7 @@
 use crate::about::about;
-use crate::printers::list_printers;
+use crate::logging::{get_logs, log, logs_directory};
+use crate::printers::{create_test_print, list_printers};
+use crate::settings::{create_label, load, save};
 use tracing::info;
 
 mod about;
@@ -7,9 +9,6 @@ mod helper_service;
 mod logging;
 mod printers;
 mod settings;
-
-use crate::logging::{get_logs, log, logs_directory};
-use crate::settings::{create_label, load, save};
 
 pub static DEBUG: bool = cfg!(debug_assertions);
 
@@ -37,6 +36,7 @@ pub fn run() {
             load,
             save,
             list_printers,
+            create_test_print,
             about,
             create_label
         ])
