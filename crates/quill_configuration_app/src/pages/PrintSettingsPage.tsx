@@ -1,6 +1,6 @@
 import {ErrorBoundary} from "../ErrorBoundry.tsx";
 import {useQuillSettings} from "../providers/QuillSettingsProvider.tsx";
-import {Accordion, ListBox, Select, Separator, Tabs} from "@heroui/react";
+import {Accordion, ListBox, Select, Separator} from "@heroui/react";
 import {Icon} from "@iconify-icon/react";
 
 export function PrintSettingsPage()
@@ -68,21 +68,68 @@ export function PrintSettingsPage()
                         </div>
                         <div className={"flex flex-col bg-surface p-6 rounded-2xl shadow-sm border grow shrink basis-0"}>
                             <label className="text-base-plus font-bold">Default orientation</label>
-                            <Tabs className="w-full max-w-md mt-2" selectedKey={settings.defaultOrientation.toString()} onSelectionChange={key => setDefaultOrientation(Number(key))}>
-                                <Tabs.ListContainer>
-                                    <Tabs.List aria-label="Default orientation">
-                                        <Tabs.Tab id="0">
-                                            Portrait
-                                            <Tabs.Indicator/>
-                                        </Tabs.Tab>
-                                        <Tabs.Tab id="1">
-                                            Landscape
-                                            <Tabs.Indicator/>
-                                        </Tabs.Tab>
-                                    </Tabs.List>
-                                </Tabs.ListContainer>
-                            </Tabs>
-                            <p className="text-sm-plus text-fg-muted mt-2.5 leading-snug">Rotation applied before printing. Most product tags are portrait.</p>
+                            {(() =>
+                            {
+                                // Values 0-3 are the quarter-turn presets (Normal/90/180/270);
+                                // any other value is a custom clockwise angle in degrees.
+                                const isCustom = ![0, 1, 2, 3].includes(settings.defaultOrientation);
+                                const selectedKey = isCustom ? "custom" : settings.defaultOrientation.toString();
+                                // Custom degrees are stored in a u8 and must avoid the 0-3 preset codes.
+                                const clampDegrees = (value: number): number =>
+                                    Number.isFinite(value) ? Math.min(255, Math.max(4, Math.round(value))) : 45;
+                                return (
+                                    <>
+                                        <Select
+                                            aria-label="Default orientation"
+                                            className="w-full max-w-md mt-2"
+                                            value={selectedKey}
+                                            onChange={key => setDefaultOrientation(
+                                                key === "custom"
+                                                    ? (isCustom ? settings.defaultOrientation : 45)
+                                                    : Number(key)
+                                            )}
+                                        >
+                                            <Select.Trigger>
+                                                <Select.Value/>
+                                                <Select.Indicator/>
+                                            </Select.Trigger>
+                                            <Select.Popover>
+                                                <ListBox aria-label="Default orientation options">
+                                                    <ListBox.Item id={"0"} key={"0"} textValue={"Normal (0°)"}>Normal (0°)</ListBox.Item>
+                                                    <ListBox.Item id={"1"} key={"1"} textValue={"Rotate 90°"}>Rotate 90° clockwise</ListBox.Item>
+                                                    <ListBox.Item id={"2"} key={"2"} textValue={"Rotate 180°"}>Rotate 180°</ListBox.Item>
+                                                    <ListBox.Item id={"3"} key={"3"} textValue={"Rotate 270°"}>Rotate 270° clockwise</ListBox.Item>
+                                                    <ListBox.Item id={"custom"} key={"custom"} textValue={"Custom angle"}>Custom angle…</ListBox.Item>
+                                                </ListBox>
+                                            </Select.Popover>
+                                        </Select>
+                                        {isCustom && (
+                                            <div className="mt-3">
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <span className="text-sm-plus text-fg-muted">Custom angle</span>
+                                                    <span className="font-mono text-lg font-semibold text-accent min-w-7 text-right">{settings.defaultOrientation}°</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    aria-label="Custom rotation in degrees"
+                                                    min={4}
+                                                    max={255}
+                                                    step={1}
+                                                    value={settings.defaultOrientation}
+                                                    onChange={e => setDefaultOrientation(clampDegrees(Number(e.target.value)))}
+                                                    className="w-full my-2.5 mb-1"
+                                                />
+                                                <div className="flex justify-between text-xs text-fg-subtle font-mono mt-2">
+                                                    <span onClick={() => setDefaultOrientation(4)} className={"cursor-pointer"}>4°</span>
+                                                    <span onClick={() => setDefaultOrientation(45)} className={"cursor-pointer"}>45°</span>
+                                                    <span onClick={() => setDefaultOrientation(255)} className={"cursor-pointer"}>255°</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()}
+                            <p className="text-sm-plus text-fg-muted mt-2.5 leading-snug">Rotation applied before printing. Presets cover the common quarter-turns; use a custom angle (4–255°) for anything else.</p>
                         </div>
                     </div>
 
