@@ -3,12 +3,13 @@ use crate::print_orientation::PageOrientation;
 use crate::printer_info::PrinterInfo;
 use crate::stock::Stock;
 use crate::{image_processing, to_cstring};
+use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 use windows::Win32::Foundation::ERROR_INSUFFICIENT_BUFFER;
 use windows::Win32::Graphics::Printing::{
     DATATYPES_INFO_1A, DOC_INFO_1A, EndDocPrinter, EndPagePrinter, EnumPrintProcessorDatatypesA,
     PRINTER_HANDLE, StartDocPrinterA, StartPagePrinter, WritePrinter,
 };
-use tracing::{debug, error, info, warn};
 use windows::core::{PCSTR, PSTR};
 
 pub struct PrinterHandle {
@@ -102,7 +103,9 @@ impl PrinterHandle {
                 }
                 if written == 0 {
                     let err = windows::core::Error::from_thread();
-                    error!("WritePrinter wrote 0 bytes at offset {offset} for job_id={job_id}: {err}");
+                    error!(
+                        "WritePrinter wrote 0 bytes at offset {offset} for job_id={job_id}: {err}"
+                    );
                     return Err(QuillError::WindowsError(err));
                 }
                 offset += written as usize;
@@ -136,6 +139,7 @@ impl PrinterHandle {
         result
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn print_png(
         &self,
         job_name: impl AsRef<str>,
@@ -143,9 +147,12 @@ impl PrinterHandle {
         stock: Stock,
         orientation: PageOrientation,
         scale: f32,
+        monochrome_threshold: u32,
+        density: f32,
     ) -> Result<(), QuillError> {
-        const BRIGHTNESS_THREASHOLD: u32 = 191; // ~25% brightness -> 255-(255*0.25) = 191.25
-        const DOTS_PER_MM: f32 = 8.0;
+        let scale = scale.clamp(0.0, 1.0);
+        let monochrome_threshold = monochrome_threshold.clamp(0, 255);
+        let density = density.clamp(4.0, 15.0);
 
         debug!(
             "print_png on '{}': source {}x{} px, stock {:.2}x{:.2} mm, orientation {:?}, scale {scale}",
@@ -157,7 +164,7 @@ impl PrinterHandle {
             orientation
         );
 
-        let to_dots = |mm: f32| (mm * DOTS_PER_MM).round() as u32;
+        let to_dots = |mm: f32| (mm * density).round() as u32;
 
         let label_w_dots = to_dots(stock.width_mm()).max(1);
         let label_h_dots = to_dots(stock.height_mm()).max(1);
@@ -211,7 +218,7 @@ impl PrinterHandle {
                     }
                     let [r, g, b] = source.get_pixel(x, y).0;
                     let luma = (r as u32 * 299 + g as u32 * 587 + b as u32 * 114) / 1000;
-                    if luma < BRIGHTNESS_THREASHOLD {
+                    if luma < monochrome_threshold {
                         byte &= !(0x80u8 >> bit); // MSB is the left-most pixel; 0 = ink
                     }
                 }
@@ -302,9 +309,7 @@ impl PrinterHandle {
                 &mut returned,
             )
             .ok()
-            .inspect_err(|e| {
-                error!("EnumPrintProcessorDatatypesA failed to fill buffer: {e}")
-            })
+            .inspect_err(|e| error!("EnumPrintProcessorDatatypesA failed to fill buffer: {e}"))
             .map_err(QuillError::WindowsError)?;
         }
 
@@ -334,10 +339,7 @@ impl PrinterHandle {
             self.handle = None;
             match &result {
                 Ok(()) => info!("Closed printer handle for '{}'", self.info.printer_name),
-                Err(e) => error!(
-                    "ClosePrinter failed for '{}': {e}",
-                    self.info.printer_name
-                ),
+                Err(e) => error!("ClosePrinter failed for '{}': {e}", self.info.printer_name),
             }
             result
         } else {
@@ -347,5 +349,80 @@ impl PrinterHandle {
             );
             Err(QuillError::PrinterNotOpenedError)
         }
+    }
+
+    /// This will print a dynamic test image that will show
+    /// the bounds of the stock and a center point.
+    pub fn test_print(
+        &self,
+        stock: Stock,
+        rotation: PageOrientation,
+        scale: f32,
+        monochrome_threshold: u32,
+        density: f32,
+    ) -> Result<(), QuillError> {
+        let width = ((stock.width_mm() * density) * scale) as u32;
+        let height = ((stock.height_mm() * density) * scale) as u32;
+        let mut png = image::RgbImage::new(width, height);
+        let line_width = 5;
+        let mut black_pixels: Vec<(u32, u32)> = vec![];
+
+        // mark the horizontal bar
+        for x in 0..width {
+            for dot in 0..line_width {
+                black_pixels.push((x, dot));
+                black_pixels.push((x, height - 1 - dot));
+            }
+        }
+
+        // mark the vertical bar
+        for y in 0..height {
+            for dot in 0..line_width {
+                black_pixels.push((dot, y));
+                black_pixels.push((width - 1 - dot, y));
+            }
+        }
+
+        // mark center point
+        for x in (width / 2) - line_width..(width / 2) + line_width {
+            for y in (height / 2) - line_width..(height / 2) + line_width {
+                png.put_pixel(x, y, image::Rgb([0, 0, 0]));
+                black_pixels.push((x, y));
+            }
+        }
+
+        // draw the pixels
+        for x in line_width..width - line_width {
+            for y in line_width..height - line_width {
+                if black_pixels.contains(&(x, y)) {
+                    png.put_pixel(x, y, image::Rgb([0, 0, 0]));
+                } else {
+                    png.put_pixel(x, y, image::Rgb([255, 255, 255]));
+                }
+            }
+        }
+
+        //                use std::io::Write;
+        //                let mut bytes: Vec<u8> = Vec::new();
+        //                png.write_to(
+        //                    &mut std::io::Cursor::new(&mut bytes),
+        //                    image::ImageFormat::Png,
+        //                )
+        //                .unwrap();
+        //                let mut file = std::fs::File::create("test_print.png").unwrap();
+        //                file.write_all(&bytes).unwrap();
+
+        let uuid = Uuid::new_v4();
+        self.print_png(
+            format!("test_print-{uuid}"),
+            &png,
+            stock,
+            rotation,
+            scale,
+            monochrome_threshold,
+            density,
+        )?;
+
+        Ok(())
     }
 }

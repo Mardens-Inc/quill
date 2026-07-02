@@ -10,3 +10,4 @@ thiserror = { version = "2.0.18" }
 image = { version = "0.25.10", features = ["png", "jpeg"] }
 tracing = { workspace = true }
 serde = { version = "1.0.228", features = ["derive"] }
+uuid = { version = "1.23.4", features = ["v4"] }

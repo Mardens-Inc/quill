@@ -27,9 +27,9 @@ fn main() {
             break;
         }
         println!("printing #{}", index);
-
+        
         handle
-            .print_png("test-print", &img, stock, PageOrientation::Rotate180, 1.0)
+            .print_png("test-print", &img, stock, PageOrientation::Rotate180, 1.0, 128, 8.0)
             .expect("Failed to print image!");
 
         index += 1;
