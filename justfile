@@ -32,15 +32,3 @@ _dist:
 _clean_node:
     @Write-Host "Cleaning node modules..."
     @if (Test-Path ./node_modules){Remove-Item ./node_modules -Recurse -Force}
-
-[linux]
-[working-directory("./crates/quill_configuration_app")]
-_clean_node:
-    @echo "Cleaning node modules..."
-    @rm -rf ./node_modules
-
-[macos]
-[working-directory("./crates/quill_configuration_app")]
-_clean_node:
-    @echo "Cleaning node modules..."
-    @rm -rdf ./node_modules
