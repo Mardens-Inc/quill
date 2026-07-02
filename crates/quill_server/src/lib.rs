@@ -5,8 +5,8 @@ use serde_json::json;
 use tracing::*;
 
 mod health_endpoint;
-mod util;
 mod printer_endpoint;
+mod util;
 
 pub static DEBUG: bool = cfg!(debug_assertions);
 pub async fn run() -> Result<()> {
@@ -29,7 +29,11 @@ pub async fn run() -> Result<()> {
                         .into()
                     }),
             )
-            .service(web::scope("").configure(health_endpoint::configure))
+            .service(
+                web::scope("")
+                    .configure(printer_endpoint::configure)
+                    .configure(health_endpoint::configure)
+            )
     })
     .workers(4)
     .bind(format!("0.0.0.0:{port}", port = port))?
