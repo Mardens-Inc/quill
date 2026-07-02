@@ -29,7 +29,6 @@ tar = "0.4.43"
 xz2 = "0.1.7"
 
 quill_config = { path = "../quill_config" }
-clap = { version = "4.6.1", features = ["unicode", "color", "error-context", "help", "string", "suggestions", "usage", "wrap_help"] }
 
 [build-dependencies]
 walkdir = "2.5.0"

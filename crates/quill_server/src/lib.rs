@@ -6,6 +6,7 @@ use tracing::*;
 
 mod health_endpoint;
 mod util;
+mod printer_endpoint;
 
 pub static DEBUG: bool = cfg!(debug_assertions);
 pub async fn run() -> Result<()> {
